@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Simulador de Memória Virtual</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+<div class="container">
+    <h1>Simulador de Memória Virtual</h1>
+    <form id="configForm">
+        <label for="pageSize">Tamanho da Página:</label>
+        <select id="pageSize" name="pageSize">
+            <option value="16">16 B</option>
+            <option value="32">32 B</option>
+            <option value="64">64 B</option>
+            <option value="128">128 B</option>
+        </select>
+
+        <label for="mpSize">Tamanho da Memória Principal:</label>
+        <select id="mpSize" name="mpSize">
+            <option value="1024">1024 B</option>
+            <option value="2048">2048 B</option>
+            <option value="4096">4096 B</option>
+        </select>
+
+        <label for="logicalBits">Bits de Endereço Lógico:</label>
+        <select id="logicalBits" name="logicalBits">
+            <option value="8">8 bits</option>
+            <option value="12">12 bits</option>
+            <option value="16" selected>16 bits</option>
+            <option value="20">20 bits</option>
+        </select>
+
+        <label for="tlbLines">Linhas da TLB:</label>
+        <select id="tlbLines" name="tlbLines">
+            <option value="4">4</option>
+            <option value="8">8</option>
+            <option value="16" selected>16</option>
+            <option value="32">32</option>
+        </select>
+
+        <label for="policy">Política de Substituição:</label>
+        <select id="policy" name="policy">
+            <option value="LRU" selected>LRU</option>
+            <option value="FIFO">FIFO</option>
+            <option value="Random">Aleatória</option>
+        </select>
+
+        <button type="submit">Iniciar Simulação</button>
+    </form>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
