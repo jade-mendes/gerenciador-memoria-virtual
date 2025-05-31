@@ -11,6 +11,7 @@
 #include <pthread.h>
 
 #include "main_menu.h"
+#include "simulador_page.h"
 
 
 #define PORT 7789
@@ -141,7 +142,9 @@ void handle_request(const int client_socket) {
     else if (strncmp(buffer, "POST", 4) == 0) {
         const char* request_url = strtok_r(buffer + 5, " ", &strtok_r_buf);
 
+        // Aqui adiciona as rotas POST
         ADD_POST("/start-simulation", start_simulation_button)
+        ADD_POST_A("/next-cycle", next_cycle)
     }
 
     else {

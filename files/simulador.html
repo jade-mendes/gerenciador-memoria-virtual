@@ -8,113 +8,22 @@
 </head>
 <body>
 <div class="top-bar">
-    <div class="process-queue">
-        <div class="process-mini">
-            <img src="icons/firefox.png" alt="firefox" class="icon">
-            <div class="process-name">firefox</div>
-        </div>
-        <div class="process-mini">
-            <img src="icons/firefox.png" alt="firefox" class="icon">
-            <div class="process-name">firefox</div>
-        </div>
-    </div>
+    <div class="process-queue" id="process-queue"></div>
 </div>
 
 <div class="status-bar">
-    <div class="last-msg">
-        <div class="process-mini">
-            <img src="icons/firefox.png" alt="firefox" class="icon">
-            <div class="process-name">firefox</div>
-        </div>
-        <div class="message">
-            <span class="text">Processo iniciado com sucesso.</span>
-        </div>
-    </div>
-    <div id="remaining-cycles">
-        77
-    </div>
+    <div class="last-msg" id="last-msg"></div>
+    <div id="remaining-cycles">77</div>
 </div>
 
 <div class="main-container">
-    <div class="process-panel-list">
-        <div class="process-panel">
-            <h3>process_name: (pid)</h3>
-            <div class="tables">
-                <div class="table-box">
-                    <table>
-                        <thead>
-                        <tr><th>Virtual</th><th>Real</th></tr>
-                        </thead>
-                        <tbody>
-                        <tr><td>0xffff</td><td>0x0844</td></tr>
-                        <tr><td>0x1234</td><td>0x5678</td></tr>
-                        <tr><td>0x9abc</td><td>0xdef0</td></tr>
-                        <tr><td>0x1111</td><td>0x2222</td></tr>
-                        <tr><td>0x3333</td><td>0x4444</td></tr>
-                        <tr><td>0x5555</td><td>0x6666</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="info-box">
-                    <div class="process-info">
-                        <p><strong>PID:</strong> 1234</p>
-                        <p><strong>Estado:</strong> Executando</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="process-panel">
-            <h3>process_name: (pid)</h3>
-            <div class="tables">
-                <div class="table-box">
-                    <table>
-                        <thead>
-                        <tr><th>Virtual</th><th>Real</th></tr>
-                        </thead>
-                        <tbody>
-                        <tr><td>0xffff</td><td>0x0844</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="info-box">
-                    <div class="process-info">
-                        <p><strong>PID:</strong> 1234</p>
-                        <p><strong>Estado:</strong> Executando</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="process-panel">
-            <h3>process_name: (pid)</h3>
-            <div class="tables">
-                <div class="table-box">
-                    <table>
-                        <thead>
-                        <tr><th>Virtual</th><th>Real</th></tr>
-                        </thead>
-                        <tbody>
-                        <tr><td>0xffff</td><td>0x0844</td></tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="info-box">
-                    <div class="process-info">
-                        <p><strong>PID:</strong> 1234</p>
-                        <p><strong>Estado:</strong> Executando</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
+    <div class="process-panel-list" id="process-panel-list"></div>
 
     <div class="memory-panel">
         <div class="memory-content">
             <div class="usage-bar">
-                <div class="fill" style="height: 75%"></div>
-                <div class="usage-label">75%</div>
+                <div class="fill" id="memory-fill" style="height: 75%"></div>
+                <div class="usage-label" id="memory-usage-label">75%</div>
             </div>
             <div class="memory-block">
                 <div class="content">
@@ -133,12 +42,8 @@
             <table>
                 <thead>
                 <tr><th>Virtual</th><th>Real</th><th>Dirty</th><th>Referenced</th><th>Modified</th></tr>
-                <tr><th>0xffff</th><th>0x0844</th><th>Sim</th><th>Não</th><th>Sim</th></tr>
-                <tr><th>0x1234</th><th>0x5678</th><th>Não</th><th>Sim</th><th>Não</th></tr>
-                <tr><th>0x9abc</th><th>0xdef0</th><th>Sim</th><th>Não</th><th>Sim</th></tr>
-                <tr><th>0x1111</th><th>0x2222</th><th>Não</th><th>Sim</th><th>Não</th></tr>
-                <tr><th>0x3333</th><th>0x4444</th><th>Sim</th><th>Não</th><th>Sim</th></tr>
                 </thead>
+                <tbody id="tlb-table"></tbody>
             </table>
         </div>
     </div>
@@ -150,6 +55,36 @@
     <button id="next-cycle">Próximo ciclo</button>
 </div>
 
-<script src="script.js"></script>
+<!-- Templates -->
+<template id="template-process-mini">
+    <div class="process-mini">
+        <img src="" alt="" class="icon">
+        <div class="process-name"></div>
+    </div>
+</template>
+
+<template id="template-process-panel">
+    <div class="process-panel">
+        <h3></h3>
+        <div class="tables">
+            <div class="table-box">
+                <table>
+                    <thead>
+                    <tr><th>Virtual</th><th>Real</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="info-box">
+                <div class="process-info">
+                    <p><strong>PID:</strong> <span class="pid"></span></p>
+                    <p><strong>Estado:</strong> <span class="state"></span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script src="simulador.js"></script>
 </body>
 </html>
