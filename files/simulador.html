@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulador de Memória Virtual</title>
+    <link rel="stylesheet" href="simulador.css">
+</head>
+<body>
+<div class="top-bar">
+    <div class="process-queue" id="process-queue"></div>
+</div>
+
+<div class="status-bar">
+    <div class="last-msg" id="last-msg"></div>
+    <div id="remaining-cycles">77</div>
+</div>
+
+<div class="main-container">
+    <div class="process-panel-list" id="process-panel-list"></div>
+
+    <div class="memory-panel">
+        <div class="memory-content">
+            <div class="usage-bar">
+                <div class="fill" id="memory-fill" style="height: 75%"></div>
+                <div class="usage-label" id="memory-usage-label">75%</div>
+            </div>
+            <div class="memory-block">
+                <div class="content">
+                    Conteúdo
+                </div>
+                <div class="address-bar">
+                    <label>
+                        <input type="text" placeholder="Endereço">
+                    </label>
+                    <button>Adicionar</button>
+                    <button>Limpar</button>
+                </div>
+            </div>
+        </div>
+        <div class="tbl table-box">
+            <table>
+                <thead>
+                <tr><th>Virtual</th><th>Real</th><th>Dirty</th><th>Referenced</th><th>Modified</th></tr>
+                </thead>
+                <tbody id="tlb-table"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="bottom-bar">
+    <button id="restart">Reiniciar simulação</button>
+    <span id="current-cycle">Ciclo atual: 0</span>
+    <button id="next-cycle">Próximo ciclo</button>
+</div>
+
+<!-- Templates -->
+<template id="template-process-mini">
+    <div class="process-mini">
+        <img src="" alt="" class="icon">
+        <div class="process-name"></div>
+    </div>
+</template>
+
+<template id="template-process-panel">
+    <div class="process-panel">
+        <h3></h3>
+        <div class="tables">
+            <div class="table-box">
+                <table>
+                    <thead>
+                    <tr><th>Virtual</th><th>Real</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="info-box">
+                <div class="process-info">
+                    <p><strong>PID:</strong> <span class="pid"></span></p>
+                    <p><strong>Estado:</strong> <span class="state"></span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script src="simulador.js"></script>
+</body>
+</html>

@@ -6,6 +6,7 @@
 #ifndef WEB_SERVER_H
 
     void start_web_server();
+    void send_json(const int client_socket, const char *json);
 
 #define WEB_SERVER_H
 

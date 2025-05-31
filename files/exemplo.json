@@ -1,0 +1,53 @@
+{
+  "cycle": 23,
+  "memory_usage": 72,
+  "process_queue": [
+    {"name": "terminal", "icon": "icons/terminal.png"},
+    {"name": "vlc", "icon": "icons/vlc.png"},
+    {"name": "gedit", "icon": "icons/gedit.png"}
+  ],
+  "current_process": {
+    "name": "firefox",
+    "icon": "icons/firefox.png",
+    "last_msg": "Acessando endereço virtual 0xABCD"
+  },
+  "process_list": [
+    {
+      "name": "firefox",
+      "pid": 1234,
+      "state": "Executando",
+      "page_table": [
+        {"virtual": "0xffff", "real": "0x0844"},
+        {"virtual": "0x1234", "real": "0x5678"}
+      ]
+    },
+    {
+      "name": "terminal",
+      "pid": 5678,
+      "state": "Pronto",
+      "page_table": [
+        {"virtual": "0xabcd", "real": "0x0001"}
+      ]
+    },
+    {
+      "name": "vlc",
+      "pid": 9101,
+      "state": "Bloqueado",
+      "page_table": [
+        {"virtual": "0x2345", "real": "0x6789"}
+      ]
+    },
+    {
+      "name": "gedit",
+      "pid": 1122,
+      "state": "Pronto",
+      "page_table": [
+        {"virtual": "0x3456", "real": "0x7890"}
+      ]
+    }
+  ],
+  "tlb": [
+    {"virtual": "0xffff", "real": "0x0844", "dirty": "Sim", "referenced": "Não", "modified": "Sim"},
+    {"virtual": "0x1234", "real": "0x5678", "dirty": "Não", "referenced": "Sim", "modified": "Não"}
+  ]
+}
