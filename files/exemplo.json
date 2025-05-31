@@ -1,5 +1,5 @@
 {
-  "cycle": 23,
+  "cycle": 0,
   "memory_usage": 72,
   "process_queue": [
     {"name": "terminal", "icon": "icons/terminal.png"},
@@ -32,7 +32,7 @@
     {
       "name": "vlc",
       "pid": 9101,
-      "state": "Bloqueado",
+      "state": "Pronto",
       "page_table": [
         {"virtual": "0x2345", "real": "0x6789"}
       ]

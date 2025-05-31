@@ -11,4 +11,5 @@ add_executable(gerenciador_memoria_virtual
         src/main_menu.h
         src/simulador_page.c
         src/simulador_page.h
+        src/falloc.c
 )
