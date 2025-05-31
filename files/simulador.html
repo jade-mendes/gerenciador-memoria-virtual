@@ -26,6 +26,9 @@
             <img src="icons/firefox.png" alt="firefox" class="icon">
             <div class="process-name">firefox</div>
         </div>
+        <div class="message">
+            <span class="text">Processo iniciado com sucesso.</span>
+        </div>
     </div>
     <div id="remaining-cycles">
         77
@@ -121,7 +124,8 @@
                     <label>
                         <input type="text" placeholder="Endereço">
                     </label>
-                    <button>Update</button>
+                    <button>Adicionar</button>
+                    <button>Limpar</button>
                 </div>
             </div>
         </div>
@@ -141,7 +145,8 @@
 </div>
 
 <div class="bottom-bar">
-    <button id="current-cycle">Ciclo atual</button>
+    <button id="restart">Reiniciar simulação</button>
+    <span id="current-cycle">Ciclo atual: 0</span>
     <button id="next-cycle">Próximo ciclo</button>
 </div>
 
