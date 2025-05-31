@@ -128,6 +128,11 @@ void handle_request(const int client_socket) {
             char *filename = strtok_r(buffer + 5, " ", &strtok_r_buf);
             send_file(client_socket, filename, "text/css");
         }
+        // html
+        else if (strstr(buffer, ".html ") != NULL) {
+            char *filename = strtok_r(buffer + 5, " ", &strtok_r_buf);
+            send_file(client_socket, filename, "text/html");
+        }
         else {
             char *filename = strtok_r(buffer + 5, " ", &strtok_r_buf);
             send_file(client_socket, filename, "text/plain");

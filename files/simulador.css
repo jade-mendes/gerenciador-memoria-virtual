@@ -1,0 +1,242 @@
+/* Reset e fonte padrão */
+* {
+    box-sizing: border-box;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+body {
+    margin: 0;
+    background-color: #121212;
+    padding: 20px;
+    color: #e0e0e0;
+}
+
+/* Estilo geral dos contêineres */
+.top-bar, .status-bar, .main-container, .bottom-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 15px;
+}
+
+.process-icons {
+    display: flex;
+    gap: 10px;
+}
+
+.icon {
+    background: #1e1e1e;
+    border: 2px solid #333;
+    padding: 5px;
+    text-align: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(255,255,255,0.05);
+}
+
+.process-queue {
+    display: flex;
+    flex-grow: 1;
+    border: 2px solid #333;
+    background-color: #1e1e1e;
+    border-radius: 6px;
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(255,255,255,0.03);
+    flex-direction: row;
+}
+
+.process-mini {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #2a2a2a;
+    border-radius: 6px;
+    padding: 5px;
+    margin-right: 10px;
+}
+
+.status-bar {
+    justify-content: space-between;
+}
+
+.last-msg {
+    display: flex;
+    flex-grow: 1;
+    border: 2px solid #333;
+    border-radius: 6px;
+    align-items: center;
+    padding: 8px;
+    background: #1e1e1e;
+}
+
+.message {
+    border-top: 3px solid #888;
+    margin-left: 12px;
+    flex-grow: 1;
+    padding: 6px;
+    font-weight: 500;
+}
+
+#remaining-cycles {
+    width: 59px;
+    border: 2px solid #333;
+    background: #1e1e1e;
+    padding: 12px;
+    border-radius: 6px;
+    box-shadow: 0 1px 4px rgba(255,255,255,0.03);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+}
+
+.main-container {
+    display: flex;
+    gap: 10px;
+}
+
+.process-panel-list {
+    border: 2px solid #333;
+    background: #1e1e1e;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: scroll;
+    width: 60vw;
+    display: flex;
+    flex-direction: row;
+    gap: 15px;
+}
+
+
+.process-panel {
+    display: flex;
+    flex-direction: column;
+    padding: 10px;
+    border: 2px solid #333;
+    background: #1e1e1e;
+    border-radius: 6px;
+    width: 50vw;
+    text-align: center;
+}
+
+.memory-panel {
+    flex: 1;
+    border: 2px solid #333;
+    background: #1e1e1e;
+    padding: 12px;
+    border-radius: 6px;
+}
+
+.tables {
+    display: flex;
+    gap: 10px;
+}
+
+.table-box, .info-box {
+    display: flex;
+    flex: 1;
+    border: 2px solid #333;
+    border-radius: 6px;
+    padding: 10px;
+    background: #2a2a2a;
+    flex-direction: column;
+    justify-content: space-around;
+    align-items: center;
+}
+
+.table-box table, .table-box th, .table-box td {
+    width: 250px;
+    border: 1px solid #555;
+    border-collapse: collapse;
+    padding: 6px;
+    text-align: center;
+    background-color: #1e1e1e;
+    color: #e0e0e0;
+}
+
+.memory-content {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.usage-bar {
+    width: 30px;
+    height: 160px;
+    border: 1px solid #444;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    border-radius: 4px;
+    overflow: hidden;
+    background: #2a2a2a;
+}
+
+.content {
+    width: 100%;
+    height: 130px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.fill {
+    width: 100%;
+    background-color: #66bb6a;
+}
+
+.usage-label {
+    font-size: 12px;
+    padding: 4px;
+    font-weight: bold;
+    color: #e0e0e0;
+}
+
+.memory-block {
+    flex-grow: 1;
+    border: 1px solid #444;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    background: #1e1e1e;
+    border-radius: 4px;
+    height: fit-content;
+}
+
+.address-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 5px;
+    font-size: 14px;
+    color: #ccc;
+}
+
+.tbl {
+    border: 1px solid #444;
+    margin-top: 10px;
+    padding: 6px;
+    background: #2a2a2a;
+    border-radius: 4px;
+    color: #e0e0e0;
+}
+
+.bottom-bar {
+    justify-content: space-between;
+}
+
+.bottom-bar button {
+    padding: 12px 24px;
+    font-size: 16px;
+    background-color: #1e88e5;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.bottom-bar button:hover {
+    background-color: #1565c0;
+}
