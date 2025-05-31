@@ -1,0 +1,1 @@
+gcc main.c menu.c -o programa && ./programa

@@ -63,6 +63,7 @@ void send_file(const int client_socket, char *filename, const char *content_type
     char path[1024];
     format_file_path(filename);
     sprintf(path, base_file_path, filename);
+    printf("%s", path);
     FILE *file = fopen(path, "r");
     if (file == NULL) {
         // Arquivo não encontrado
@@ -135,7 +136,7 @@ void handle_request(const int client_socket) {
     }
     else if (strncmp(buffer, "POST", 4) == 0) {
         const char* request_url = strtok_r(buffer + 5, " ", &strtok_r_buf);
-
+        
         ADD_POST("/start-simulation", start_simulation_button)
     }
 

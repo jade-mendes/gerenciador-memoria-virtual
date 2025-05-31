@@ -1,0 +1,10 @@
+{
+    "C_Cpp.default.compilerPath": "/usr/bin/gcc",
+    "files.associations": {
+        "*.dbclient-js": "javascript",
+        "stdio.h": "c",
+        "stdlib.h": "c",
+        "string.h": "c",
+        "in.h": "c"
+    }
+}

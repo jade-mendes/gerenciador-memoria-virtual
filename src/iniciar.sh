@@ -1,0 +1,1 @@
+gcc src/main.c src/main_menu.c src/web_server.c -o src/programa && ./src/programa
