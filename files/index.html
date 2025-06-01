@@ -10,43 +10,84 @@
 <div class="container">
     <h1>Simulador de Memória Virtual</h1>
     <form id="configForm">
+
         <label for="pageSize">Tamanho da Página:</label>
-        <select id="pageSize" name="pageSize">
-            <option value="16">16 B</option>
-            <option value="32">32 B</option>
-            <option value="64">64 B</option>
-            <option value="128">128 B</option>
-        </select>
+        <div>
+            <input type="text" name="PAGE_SIZE" placeholder="16">
+            <select id="pageSize" name="PAGE_SIZE_DIM">
+                <option value="B">byte</option>
+                <option value="b">bits</option>
+                <option value="Mb">megabits</option>
+                <option value="Gb">gigabits</option>
+                <option value="Tb">terabits</option>
+                <option value="MB">megabyte</option>
+                <option value="GB">gigabyte</option>
+                <option value="TB">terabyte</option>
+                <option value="Mib">mebibits</option>
+                <option value="Gib">gibibits</option>
+                <option value="Tib">tebibits</option>
+                <option value="MiB">mebibyte</option>
+                <option value="GiB">gibibyte</option>
+                <option value="TiB">tebibyte</option>
+            </select>
+        </div>
 
         <label for="mpSize">Tamanho da Memória Principal:</label>
-        <select id="mpSize" name="mpSize">
-            <option value="1024">1024 B</option>
-            <option value="2048">2048 B</option>
-            <option value="4096">4096 B</option>
-        </select>
+        <div>
+            <input type="text" name="MP_SIZE" placeholder="64">
+            <select id="mpSize" name="MP_SIZE_DIM">
+                <option value="B">byte</option>
+                <option value="b">bits</option>
+                <option value="Mb">megabits</option>
+                <option value="Gb">gigabits</option>
+                <option value="Tb">terabits</option>
+                <option value="MB">megabyte</option>
+                <option value="GB">gigabyte</option>
+                <option value="TB">terabyte</option>
+                <option value="Mib">mebibits</option>
+                <option value="Gib">gibibits</option>
+                <option value="Tib">tebibits</option>
+                <option value="MiB">mebibyte</option>
+                <option value="GiB">gibibyte</option>
+                <option value="TiB">tebibyte</option>
+            </select>
+        </div>
 
-        <label for="logicalBits">Bits de Endereço Lógico:</label>
-        <select id="logicalBits" name="logicalBits">
-            <option value="8">8 bits</option>
-            <option value="12">12 bits</option>
-            <option value="16" selected>16 bits</option>
-            <option value="20">20 bits</option>
-        </select>
+        <label for="msSize">Tamanho da Memória Secundária:</label>
+        <div>
+            <input type="text" name="MS_SIZE" placeholder="1024">
+            <select id="msSize" name="MS_SIZE_DIM">
+                <option value="B">byte</option>
+                <option value="b">bits</option>
+                <option value="Mb">megabits</option>
+                <option value="Gb">gigabits</option>
+                <option value="Tb">terabits</option>
+                <option value="MB">megabyte</option>
+                <option value="GB">gigabyte</option>
+                <option value="TB">terabyte</option>
+                <option value="Mib">mebibits</option>
+                <option value="Gib">gibibits</option>
+                <option value="Tib">tebibits</option>
+                <option value="MiB">mebibyte</option>
+                <option value="GiB">gibibyte</option>
+                <option value="TiB">tebibyte</option>
+            </select>
+        </div>
 
-        <label for="tlbLines">Linhas da TLB:</label>
-        <select id="tlbLines" name="tlbLines">
-            <option value="4">4</option>
-            <option value="8">8</option>
-            <option value="16" selected>16</option>
-            <option value="32">32</option>
-        </select>
+        <label for="BITS_LOGICAL_ADDRESS">Bits de Endereço Lógico:</label>
+        <input type="text" name="BITS_LOGICAL_ADDRESS" placeholder="16">
 
-        <label for="policy">Política de Substituição:</label>
-        <select id="policy" name="policy">
+        <label for="TLB_SIZE">Linhas da TLB:</label>
+        <input type="text" name="TLB_SIZE" placeholder="16">
+
+        <label for="SUB_POLICY_TYPE">Política de Substituição:</label>
+        <select id="SUB_POLICY_TYPE" name="policy">
             <option value="LRU" selected>LRU</option>
-            <option value="FIFO">FIFO</option>
-            <option value="Random">Aleatória</option>
+            <option value="relogio">Relógio</option>
         </select>
+
+        <label for="FILE_NAME">Nome do arquivo:</label>
+        <input type="text" placeholder="data.txt" name="FILE_NAME" maxlength="100">
 
         <button type="submit">Iniciar Simulação</button>
     </form>

@@ -33,7 +33,7 @@ label {
   margin: 0.5rem 0 0.2rem;
 }
 
-select, button {
+select, button, input {
   padding: 0.5rem;
   border: none;
   border-radius: 6px;

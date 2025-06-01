@@ -107,6 +107,18 @@ char* find_json(const char* json) {
     return start;
 }
 
+// Definição das rotas (Regasi 31/05/25)
+int handle_rotes(char *buffer, const int client_socket){
+    
+    // Requisições GET 
+    if (strstr(buffer, "GET / ") != NULL) {
+        send_file(client_socket, "index.html", "text/html");
+    } else if (strstr(buffer, "GET /simulador ") != NULL) {
+        send_file(client_socket, "simulador.html", "text/html");
+    } else return 0;
+    return 1;
+}
+
 void handle_request(const int client_socket) {
     char buffer[4096];
     const int n = read(client_socket, buffer, sizeof(buffer) - 1);
@@ -121,10 +133,10 @@ void handle_request(const int client_socket) {
     char* strtok_r_buf;
     // Checar se é GET ou POST
     if (strncmp(buffer, "GET", 3) == 0) {
-        // Tratar requisição GET
-        if (strstr(buffer, "GET / ") != NULL) {
-            send_file(client_socket, "index.html", "text/html");
-        }
+        
+        // Tratamento de rotas
+        if(handle_rotes(buffer, client_socket));
+
         // css
         else if (strstr(buffer, ".css ") != NULL) {
             char *filename = strtok_r(buffer + 5, " ", &strtok_r_buf);

@@ -5,6 +5,8 @@
         "stdio.h": "c",
         "stdlib.h": "c",
         "string.h": "c",
-        "in.h": "c"
+        "in.h": "c",
+        "pthread.h": "c",
+        "menu.h": "c"
     }
 }

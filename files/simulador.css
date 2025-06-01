@@ -11,6 +11,13 @@ body {
     color: #e0e0e0;
 }
 
+body > div{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
 /* Estilo geral dos contêineres */
 .top-bar, .status-bar, .main-container, .bottom-bar {
     display: flex;
