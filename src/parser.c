@@ -1,13 +1,10 @@
-//
-// Created by nathan on 01/06/2025.
-//
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+
+#define MAX_NAME_LEN 8 // 7 caracteres + \0
 
 // Enumeração dos tipos de instrução
 typedef enum {
@@ -28,25 +25,24 @@ typedef enum {
     INST_JUMP_EQ_VAR_VAR
 } InstType;
 
-// Estrutura para argumentos de saltos (com suporte a label/índice)
+// Estrutura para argumentos de saltos
 typedef struct {
     int index;      // Índice numérico (se usado)
-    char* label;    // Nome da label (se usado)
+    char label[MAX_NAME_LEN];    // Nome da label
 } JumpTarget;
 
 // União para argumentos de instruções
 typedef union {
-    struct { char* process_name; } create;
-    // Terminate não tem argumentos
-    struct { char* var_name; char* add_like; int size; } mmap;
-    struct { char* var_name; } print;
-    struct { char* var1; char* var2; } assign;
-    struct { char* var1; char* var2; int num; } assign_num;
-    struct { char* var1; char* var2; char* var3; } assign_var;
-    struct { char* label_name; } label;
+    struct { char process_name[MAX_NAME_LEN]; } create;
+    struct { char var_name[MAX_NAME_LEN]; char add_like[MAX_NAME_LEN]; int size; } mmap;
+    struct { char var_name[MAX_NAME_LEN]; } print;
+    struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } assign;
+    struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; int num; } assign_num;
+    struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; char var3[MAX_NAME_LEN]; } assign_var;
+    struct { char label_name[MAX_NAME_LEN]; } label;
     JumpTarget jump;
-    struct { JumpTarget target; char* var; int num; } jump_eq_varnum;
-    struct { JumpTarget target; char* var1; char* var2; } jump_eq_varvar;
+    struct { JumpTarget target; char var[MAX_NAME_LEN]; int num; } jump_eq_varnum;
+    struct { JumpTarget target; char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } jump_eq_varvar;
 } InstArgs;
 
 // Estrutura de uma instrução
@@ -57,7 +53,7 @@ typedef struct {
 
 // Tabela de símbolos para labels
 typedef struct LabelEntry {
-    char* name;
+    char name[MAX_NAME_LEN];
     int index;
     struct LabelEntry* next;
 } LabelEntry;
@@ -67,7 +63,8 @@ LabelEntry* label_table = NULL;
 // Funções auxiliares
 void add_label(const char* name, int index) {
     LabelEntry* entry = malloc(sizeof(LabelEntry));
-    entry->name = strdup(name);
+    strncpy(entry->name, name, MAX_NAME_LEN - 1);
+    entry->name[MAX_NAME_LEN - 1] = '\0';
     entry->index = index;
     entry->next = label_table;
     label_table = entry;
@@ -75,8 +72,12 @@ void add_label(const char* name, int index) {
 
 int find_label(const char* name) {
     LabelEntry* current = label_table;
+    char search_name[MAX_NAME_LEN];
+    strncpy(search_name, name, MAX_NAME_LEN - 1);
+    search_name[MAX_NAME_LEN - 1] = '\0';
+
     while (current) {
-        if (strcmp(current->name, name) == 0) {
+        if (strcmp(current->name, search_name) == 0) {
             return current->index;
         }
         current = current->next;
@@ -87,7 +88,6 @@ int find_label(const char* name) {
 void free_label_table() {
     while (label_table) {
         LabelEntry* next = label_table->next;
-        free(label_table->name);
         free(label_table);
         label_table = next;
     }
@@ -101,6 +101,12 @@ char* trim(char* str) {
     while (end > str && isspace((unsigned char)*end)) end--;
     end[1] = '\0';
     return str;
+}
+
+// Copia string garantindo limite de tamanho
+void safe_strcpy(char* dest, const char* src) {
+    strncpy(dest, src, MAX_NAME_LEN - 1);
+    dest[MAX_NAME_LEN - 1] = '\0';
 }
 
 // Função principal do parser
@@ -128,9 +134,9 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
             instructions[*count] = (Instruction){
-                .type = INST_CREATE,
-                .args.create.process_name = strdup(name)
+                .type = INST_CREATE
             };
+            safe_strcpy(instructions[*count].args.create.process_name, name);
             (*count)++;
         }
         else if (strcmp(trimmed, "Terminate();") == 0) {
@@ -164,12 +170,10 @@ Instruction* parse_instructions(FILE* file, int* count) {
             }
             instructions[*count] = (Instruction){
                 .type = INST_MMAP,
-                .args.mmap = {
-                    .var_name = strdup(var_name),
-                    .add_like = strdup(add_like),
-                    .size = size
-                }
+                .args.mmap.size = size
             };
+            safe_strcpy(instructions[*count].args.mmap.var_name, var_name);
+            safe_strcpy(instructions[*count].args.mmap.add_like, add_like);
             (*count)++;
         }
         else if (strncmp(trimmed, "print_", 6) == 0) {
@@ -191,9 +195,9 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
             instructions[*count] = (Instruction){
-                .type = inst_type,
-                .args.print.var_name = strdup(var_name)
+                .type = inst_type
             };
+            safe_strcpy(instructions[*count].args.print.var_name, var_name);
             (*count)++;
         }
         else if (strstr(trimmed, "=")) {
@@ -232,12 +236,10 @@ Instruction* parse_instructions(FILE* file, int* count) {
                     }
                     instructions[*count] = (Instruction){
                         .type = (*op == '+') ? INST_ASSIGN_ADD_NUM : INST_ASSIGN_SUB_NUM,
-                        .args.assign_num = {
-                            .var1 = strdup(var1),
-                            .var2 = strdup(var2),
-                            .num = num
-                        }
+                        .args.assign_num.num = num
                     };
+                    safe_strcpy(instructions[*count].args.assign_num.var1, var1);
+                    safe_strcpy(instructions[*count].args.assign_num.var2, var2);
                     (*count)++;
                 } else {
                     if (*count >= capacity) {
@@ -245,13 +247,11 @@ Instruction* parse_instructions(FILE* file, int* count) {
                         instructions = realloc(instructions, capacity * sizeof(Instruction));
                     }
                     instructions[*count] = (Instruction){
-                        .type = (*op == '+') ? INST_ASSIGN_ADD_VAR : INST_ASSIGN_SUB_VAR,
-                        .args.assign_var = {
-                            .var1 = strdup(var1),
-                            .var2 = strdup(var2),
-                            .var3 = strdup(operand)
-                        }
+                        .type = (*op == '+') ? INST_ASSIGN_ADD_VAR : INST_ASSIGN_SUB_VAR
                     };
+                    safe_strcpy(instructions[*count].args.assign_var.var1, var1);
+                    safe_strcpy(instructions[*count].args.assign_var.var2, var2);
+                    safe_strcpy(instructions[*count].args.assign_var.var3, operand);
                     (*count)++;
                 }
             } else {
@@ -261,12 +261,10 @@ Instruction* parse_instructions(FILE* file, int* count) {
                     instructions = realloc(instructions, capacity * sizeof(Instruction));
                 }
                 instructions[*count] = (Instruction){
-                    .type = INST_ASSIGN,
-                    .args.assign = {
-                        .var1 = strdup(var1),
-                        .var2 = strdup(expr)
-                    }
+                    .type = INST_ASSIGN
                 };
+                safe_strcpy(instructions[*count].args.assign.var1, var1);
+                safe_strcpy(instructions[*count].args.assign.var2, expr);
                 (*count)++;
             }
         }
@@ -291,11 +289,9 @@ Instruction* parse_instructions(FILE* file, int* count) {
             }
             instructions[*count] = (Instruction){
                 .type = INST_JUMP,
-                .args.jump = {
-                    .index = -1,
-                    .label = strdup(target)
-                }
+                .args.jump.index = -1
             };
+            safe_strcpy(instructions[*count].args.jump.label, target);
             (*count)++;
             current_index++;
         }
@@ -333,20 +329,22 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 instructions[*count] = (Instruction){
                     .type = INST_JUMP_EQ_VAR_NUM,
                     .args.jump_eq_varnum = {
-                        .target = {.index = -1, .label = strdup(target)},
-                        .var = strdup(var),
+                        .target = {.index = -1},
                         .num = num
                     }
                 };
+                safe_strcpy(instructions[*count].args.jump_eq_varnum.target.label, target);
+                safe_strcpy(instructions[*count].args.jump_eq_varnum.var, var);
             } else {
                 instructions[*count] = (Instruction){
                     .type = INST_JUMP_EQ_VAR_VAR,
                     .args.jump_eq_varvar = {
-                        .target = {.index = -1, .label = strdup(target)},
-                        .var1 = strdup(var),
-                        .var2 = strdup(operand)
+                        .target = {.index = -1}
                     }
                 };
+                safe_strcpy(instructions[*count].args.jump_eq_varvar.target.label, target);
+                safe_strcpy(instructions[*count].args.jump_eq_varvar.var1, var);
+                safe_strcpy(instructions[*count].args.jump_eq_varvar.var2, operand);
             }
             (*count)++;
             current_index++;
@@ -357,38 +355,29 @@ Instruction* parse_instructions(FILE* file, int* count) {
     for (int i = 0; i < *count; i++) {
         Instruction* inst = &instructions[i];
         switch (inst->type) {
-            case INST_JUMP:
-                if (inst->args.jump.label) {
-                    int idx = find_label(inst->args.jump.label);
-                    if (idx != -1) {
-                        inst->args.jump.index = idx;
-                        free(inst->args.jump.label);
-                        inst->args.jump.label = NULL;
-                    }
+            case INST_JUMP: {
+                int idx = find_label(inst->args.jump.label);
+                if (idx != -1) {
+                    inst->args.jump.index = idx;
                 }
                 break;
+            }
 
-            case INST_JUMP_EQ_VAR_NUM:
-                if (inst->args.jump_eq_varnum.target.label) {
-                    int idx = find_label(inst->args.jump_eq_varnum.target.label);
-                    if (idx != -1) {
-                        inst->args.jump_eq_varnum.target.index = idx;
-                        free(inst->args.jump_eq_varnum.target.label);
-                        inst->args.jump_eq_varnum.target.label = NULL;
-                    }
+            case INST_JUMP_EQ_VAR_NUM: {
+                int idx = find_label(inst->args.jump_eq_varnum.target.label);
+                if (idx != -1) {
+                    inst->args.jump_eq_varnum.target.index = idx;
                 }
                 break;
+            }
 
-            case INST_JUMP_EQ_VAR_VAR:
-                if (inst->args.jump_eq_varvar.target.label) {
-                    int idx = find_label(inst->args.jump_eq_varvar.target.label);
-                    if (idx != -1) {
-                        inst->args.jump_eq_varvar.target.index = idx;
-                        free(inst->args.jump_eq_varvar.target.label);
-                        inst->args.jump_eq_varvar.target.label = NULL;
-                    }
+            case INST_JUMP_EQ_VAR_VAR: {
+                int idx = find_label(inst->args.jump_eq_varvar.target.label);
+                if (idx != -1) {
+                    inst->args.jump_eq_varvar.target.index = idx;
                 }
                 break;
+            }
 
             default:
                 break;
@@ -400,53 +389,6 @@ Instruction* parse_instructions(FILE* file, int* count) {
 
 // Função para liberar memória
 void free_instructions(Instruction* insts, int count) {
-    for (int i = 0; i < count; i++) {
-        switch (insts[i].type) {
-            case INST_CREATE:
-                free(insts[i].args.create.process_name);
-                break;
-            case INST_MMAP:
-                free(insts[i].args.mmap.var_name);
-                free(insts[i].args.mmap.add_like);
-                break;
-            case INST_PRINT_N:
-            case INST_PRINT_P:
-            case INST_PRINT_S:
-                free(insts[i].args.print.var_name);
-                break;
-            case INST_ASSIGN:
-                free(insts[i].args.assign.var1);
-                free(insts[i].args.assign.var2);
-                break;
-            case INST_ASSIGN_ADD_NUM:
-            case INST_ASSIGN_SUB_NUM:
-                free(insts[i].args.assign_num.var1);
-                free(insts[i].args.assign_num.var2);
-                break;
-            case INST_ASSIGN_ADD_VAR:
-            case INST_ASSIGN_SUB_VAR:
-                free(insts[i].args.assign_var.var1);
-                free(insts[i].args.assign_var.var2);
-                free(insts[i].args.assign_var.var3);
-                break;
-            case INST_JUMP:
-                if (insts[i].args.jump.label) free(insts[i].args.jump.label);
-                break;
-            case INST_JUMP_EQ_VAR_NUM:
-                if (insts[i].args.jump_eq_varnum.target.label)
-                    free(insts[i].args.jump_eq_varnum.target.label);
-                free(insts[i].args.jump_eq_varnum.var);
-                break;
-            case INST_JUMP_EQ_VAR_VAR:
-                if (insts[i].args.jump_eq_varvar.target.label)
-                    free(insts[i].args.jump_eq_varvar.target.label);
-                free(insts[i].args.jump_eq_varvar.var1);
-                free(insts[i].args.jump_eq_varvar.var2);
-                break;
-            default:
-                break;
-        }
-    }
     free(insts);
     free_label_table();
 }
@@ -497,7 +439,48 @@ int main(int argc, char* argv[]) {
                        instructions[i].args.assign.var1,
                        instructions[i].args.assign.var2);
                 break;
-            // ... outros casos
+            case INST_ASSIGN_ADD_NUM:
+                printf("ADD_NUM(%s = %s + %d)\n",
+                       instructions[i].args.assign_num.var1,
+                       instructions[i].args.assign_num.var2,
+                       instructions[i].args.assign_num.num);
+                break;
+            case INST_ASSIGN_SUB_NUM:
+                printf("SUB_NUM(%s = %s - %d)\n",
+                       instructions[i].args.assign_num.var1,
+                       instructions[i].args.assign_num.var2,
+                       instructions[i].args.assign_num.num);
+                break;
+            case INST_ASSIGN_ADD_VAR:
+                printf("ADD_VAR(%s = %s + %s)\n",
+                       instructions[i].args.assign_var.var1,
+                       instructions[i].args.assign_var.var2,
+                       instructions[i].args.assign_var.var3);
+                break;
+            case INST_ASSIGN_SUB_VAR:
+                printf("SUB_VAR(%s = %s - %s)\n",
+                       instructions[i].args.assign_var.var1,
+                       instructions[i].args.assign_var.var2,
+                       instructions[i].args.assign_var.var3);
+                break;
+            case INST_JUMP:
+                printf("JUMP(%d)\n", instructions[i].args.jump.index);
+                break;
+            case INST_JUMP_EQ_VAR_NUM:
+                printf("JUMP_EQ_VAR_NUM(%d, %s, %d)\n",
+                       instructions[i].args.jump_eq_varnum.target.index,
+                       instructions[i].args.jump_eq_varnum.var,
+                       instructions[i].args.jump_eq_varnum.num);
+                break;
+            case INST_JUMP_EQ_VAR_VAR:
+                printf("JUMP_EQ_VAR_VAR(%d, %s, %s)\n",
+                       instructions[i].args.jump_eq_varvar.target.index,
+                       instructions[i].args.jump_eq_varvar.var1,
+                       instructions[i].args.jump_eq_varvar.var2);
+                break;
+            default:
+                printf("Instrução desconhecida\n");
+                break;
         }
     }
 
