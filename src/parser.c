@@ -26,7 +26,9 @@ typedef enum {
     INST_JUMP_EQ_VAR_NUM,
     INST_JUMP_EQ_VAR_VAR,
     INST_JUMP_N_EQ_VAR_NUM,
-    INST_JUMP_N_EQ_VAR_VAR
+    INST_JUMP_N_EQ_VAR_VAR,
+    INST_INPUT_N,
+    INST_INPUT_S,
 } InstType;
 
 // Estrutura para argumentos de saltos
@@ -49,6 +51,8 @@ typedef union {
     struct { JumpTarget target; char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } jump_eq_varvar;
     struct { JumpTarget target; char var[MAX_NAME_LEN]; int num; } jump_neq_varnum;
     struct { JumpTarget target; char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } jump_neq_varvar;
+    struct { char var_name[MAX_NAME_LEN]; } input_n;
+    struct { char var_name[MAX_NAME_LEN]; int size; } input_s;
 } InstArgs;
 
 // Estrutura de uma instrução
@@ -434,6 +438,51 @@ Instruction* parse_instructions(FILE* file, int* count) {
             }
             (*count)++;
         }
+        else if (strncmp(trimmed, "input_n(", 8) == 0) {
+            char* start = trimmed + 8;
+            char* end = strchr(start, ')');
+            if (!end) continue;
+            *end = '\0';
+            char* var_name = trim(start);
+
+            if (*count >= capacity) {
+                capacity = capacity ? capacity * 2 : 16;
+                instructions = realloc(instructions, capacity * sizeof(Instruction));
+            }
+            instructions[*count] = (Instruction){
+                .type = INST_INPUT_N
+            };
+            safe_strcpy(instructions[*count].args.input_n.var_name, var_name);
+            (*count)++;
+        }
+        else if (strncmp(trimmed, "input_s(", 8) == 0) {
+            char* start = trimmed + 8;
+            char* end = strchr(start, ')');
+            if (!end) continue;
+            *end = '\0';
+
+            char* var_name = strtok(start, ",");
+            char* size_str = strtok(NULL, ",");
+            if (!var_name || !size_str) continue;
+
+            int size = atoi(trim(size_str));
+            var_name = trim(var_name);
+
+            if (*count >= capacity) {
+                capacity = capacity ? capacity * 2 : 16;
+                instructions = realloc(instructions, capacity * sizeof(Instruction));
+            }
+            instructions[*count] = (Instruction){
+                .type = INST_INPUT_S,
+                .args.input_s.size = size
+            };
+            safe_strcpy(instructions[*count].args.input_s.var_name, var_name);
+            (*count)++;
+        }
+        else {
+            fprintf(stderr, "Instrução desconhecida: %s\n", trimmed);
+        }
+
     }
 
     // Resolver labels
@@ -590,6 +639,14 @@ int main(int argc, char* argv[]) {
                        instructions[i].args.jump_neq_varvar.target.index,
                        instructions[i].args.jump_neq_varvar.var1,
                        instructions[i].args.jump_neq_varvar.var2);
+                break;
+            case INST_INPUT_N:
+                printf("INPUT_N(%s)\n", instructions[i].args.input_n.var_name);
+                break;
+            case INST_INPUT_S:
+                printf("INPUT_S(%s, %d)\n",
+                       instructions[i].args.input_s.var_name,
+                       instructions[i].args.input_s.size);
                 break;
             default:
                 printf("Instrução desconhecida\n");
