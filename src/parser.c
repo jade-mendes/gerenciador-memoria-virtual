@@ -3,6 +3,8 @@
 #include <string.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <inttypes.h>
 
 #define MAX_NAME_LEN 8 // 7 caracteres + \0
 
@@ -34,7 +36,7 @@ typedef struct {
 // União para argumentos de instruções
 typedef union {
     struct { char process_name[MAX_NAME_LEN]; } create;
-    struct { char var_name[MAX_NAME_LEN]; char add_like[MAX_NAME_LEN]; int size; } mmap;
+    struct { char var_name[MAX_NAME_LEN]; uintptr_t add_like; int size; } mmap;
     struct { char var_name[MAX_NAME_LEN]; } print;
     struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } assign;
     struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; int num; } assign_num;
@@ -109,17 +111,30 @@ void safe_strcpy(char* dest, const char* src) {
     dest[MAX_NAME_LEN - 1] = '\0';
 }
 
+// Remove comentários (começando com //)
+void remove_comments(char* str) {
+    char* comment = strstr(str, "//");
+    if (comment) {
+        *comment = '\0';
+    }
+}
+
+// Converte string hexadecimal para uintptr_t
+uintptr_t hex_to_uintptr(const char* hex_str) {
+    return (uintptr_t)strtoull(hex_str, NULL, 0);
+}
+
 // Função principal do parser
 Instruction* parse_instructions(FILE* file, int* count) {
     Instruction* instructions = NULL;
     *count = 0;
     int capacity = 0;
     char line[256];
-    int current_index = 0;
 
     while (fgets(line, sizeof(line), file)) {
+        remove_comments(line);
         char* trimmed = trim(line);
-        if (trimmed[0] == ';' || trimmed[0] == '/' || trimmed[0] == '\0') continue;
+        if (trimmed[0] == '\0') continue;
 
         // Processar a linha
         if (strncmp(trimmed, "Create(", 7) == 0) {
@@ -152,7 +167,9 @@ Instruction* parse_instructions(FILE* file, int* count) {
             *var_end = '\0';
             char* var_name = trim(trimmed);
 
-            char* start = strstr(var_end + 1, "(") + 1;
+            char* start = strstr(var_end + 1, "(");
+            if (!start) continue;
+            start++;
             char* end = strchr(start, ')');
             if (!end) continue;
             *end = '\0';
@@ -170,15 +187,17 @@ Instruction* parse_instructions(FILE* file, int* count) {
             }
             instructions[*count] = (Instruction){
                 .type = INST_MMAP,
-                .args.mmap.size = size
+                .args.mmap.size = size,
+                .args.mmap.add_like = hex_to_uintptr(add_like)
             };
             safe_strcpy(instructions[*count].args.mmap.var_name, var_name);
-            safe_strcpy(instructions[*count].args.mmap.add_like, add_like);
             (*count)++;
         }
         else if (strncmp(trimmed, "print_", 6) == 0) {
             char type = trimmed[6];
-            char* start = strchr(trimmed, '(') + 1;
+            char* start = strchr(trimmed, '(');
+            if (!start) continue;
+            start++;
             char* end = strchr(start, ')');
             if (!end) continue;
             *end = '\0';
@@ -200,58 +219,69 @@ Instruction* parse_instructions(FILE* file, int* count) {
             safe_strcpy(instructions[*count].args.print.var_name, var_name);
             (*count)++;
         }
-        else if (strstr(trimmed, "=")) {
-            char* var1 = strtok(trimmed, "=");
-            char* expr = strtok(NULL, "=");
-            if (!var1 || !expr) continue;
+        else if (strstr(trimmed, "=") && !strstr(trimmed, "jump_eq")) {
+            char* eq_pos = strchr(trimmed, '=');
+            if (!eq_pos) continue;
+            *eq_pos = '\0';
+            char* var1 = trim(trimmed);
+            char* expr = trim(eq_pos + 1);
 
-            var1 = trim(var1);
-            expr = trim(expr);
-            expr[strlen(expr) - 1] = '\0'; // Remove ponto e vírgula
+            // Remover ponto e vírgula no final se existir
+            if (expr[strlen(expr)-1] == ';') {
+                expr[strlen(expr)-1] = '\0';
+            }
 
-            // Verificar tipo de atribuição
-            char* op = strpbrk(expr, "+-");
-            if (op) {
-                char* var2 = strtok(expr, "+-");
-                char* operand = strtok(NULL, "+-");
-                if (!var2 || !operand) continue;
+            // Verificar se é operação aritmética
+            char* op_pos = strpbrk(expr, "+-");
+            if (op_pos) {
+                char op = *op_pos;
+                *op_pos = '\0';
+                char* var2 = trim(expr);
+                char* operand_str = trim(op_pos + 1);
 
-                var2 = trim(var2);
-                operand = trim(operand);
-
-                // Verificar se é número ou variável
+                // Verificar se operando é número ou variável
                 bool is_num = true;
-                for (char* p = operand; *p; p++) {
-                    if (!isdigit(*p) && *p != '-' && *p != '+') {
+                for (char* p = operand_str; *p; p++) {
+                    if (!isdigit((unsigned char)*p) && *p != '-' && *p != '+') {
                         is_num = false;
                         break;
                     }
                 }
 
+                if (*count >= capacity) {
+                    capacity = capacity ? capacity * 2 : 16;
+                    instructions = realloc(instructions, capacity * sizeof(Instruction));
+                }
+
                 if (is_num) {
-                    int num = atoi(operand);
-                    if (*count >= capacity) {
-                        capacity = capacity ? capacity * 2 : 16;
-                        instructions = realloc(instructions, capacity * sizeof(Instruction));
+                    int num = atoi(operand_str);
+                    if (op == '+') {
+                        instructions[*count] = (Instruction){
+                            .type = INST_ASSIGN_ADD_NUM,
+                            .args.assign_num.num = num
+                        };
+                    } else {
+                        instructions[*count] = (Instruction){
+                            .type = INST_ASSIGN_SUB_NUM,
+                            .args.assign_num.num = num
+                        };
                     }
-                    instructions[*count] = (Instruction){
-                        .type = (*op == '+') ? INST_ASSIGN_ADD_NUM : INST_ASSIGN_SUB_NUM,
-                        .args.assign_num.num = num
-                    };
                     safe_strcpy(instructions[*count].args.assign_num.var1, var1);
                     safe_strcpy(instructions[*count].args.assign_num.var2, var2);
                     (*count)++;
                 } else {
-                    if (*count >= capacity) {
-                        capacity = capacity ? capacity * 2 : 16;
-                        instructions = realloc(instructions, capacity * sizeof(Instruction));
+                    if (op == '+') {
+                        instructions[*count] = (Instruction){
+                            .type = INST_ASSIGN_ADD_VAR
+                        };
+                    } else {
+                        instructions[*count] = (Instruction){
+                            .type = INST_ASSIGN_SUB_VAR
+                        };
                     }
-                    instructions[*count] = (Instruction){
-                        .type = (*op == '+') ? INST_ASSIGN_ADD_VAR : INST_ASSIGN_SUB_VAR
-                    };
                     safe_strcpy(instructions[*count].args.assign_var.var1, var1);
                     safe_strcpy(instructions[*count].args.assign_var.var2, var2);
-                    safe_strcpy(instructions[*count].args.assign_var.var3, operand);
+                    safe_strcpy(instructions[*count].args.assign_var.var3, operand_str);
                     (*count)++;
                 }
             } else {
@@ -274,7 +304,7 @@ Instruction* parse_instructions(FILE* file, int* count) {
             if (!end) continue;
             *end = '\0';
             char* name = trim(start);
-            add_label(name, current_index);
+            add_label(name, *count);
         }
         else if (strncmp(trimmed, "jump(", 5) == 0) {
             char* start = trimmed + 5;
@@ -293,7 +323,6 @@ Instruction* parse_instructions(FILE* file, int* count) {
             };
             safe_strcpy(instructions[*count].args.jump.label, target);
             (*count)++;
-            current_index++;
         }
         else if (strncmp(trimmed, "jump_eq(", 8) == 0) {
             char* start = trimmed + 8;
@@ -313,7 +342,7 @@ Instruction* parse_instructions(FILE* file, int* count) {
             // Verificar se o operando é número ou variável
             bool is_num = true;
             for (char* p = operand; *p; p++) {
-                if (!isdigit(*p) && *p != '-' && *p != '+') {
+                if (!isdigit((unsigned char)*p) && *p != '-' && *p != '+') {
                     is_num = false;
                     break;
                 }
@@ -347,7 +376,6 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 safe_strcpy(instructions[*count].args.jump_eq_varvar.var2, operand);
             }
             (*count)++;
-            current_index++;
         }
     }
 
@@ -420,7 +448,7 @@ int main(int argc, char* argv[]) {
                 printf("TERMINATE\n");
                 break;
             case INST_MMAP:
-                printf("MMAP(%s, %s, %d)\n",
+                printf("MMAP(%s, 0x%" PRIxPTR ", %d)\n",
                        instructions[i].args.mmap.var_name,
                        instructions[i].args.mmap.add_like,
                        instructions[i].args.mmap.size);

@@ -1,31 +1,32 @@
+// Exemplo de arquivo de entrada para o simulador de memória virtual
+// Criação de processos
+Create(main);      // Cria o processo principal
+Create(backgr);    // Cria um processo de background
 
-Create(main);
-Create(backgr);
+// Alocação de memória
+mem1 = mmap(0x1000, 32);  // Aloca 32 bytes em 0x1000
+mem2 = mmap(0x2000, 64);  // Aloca 64 bytes em 0x2000
 
+// Operações com variáveis
+mem1 = mem2;       // mem1 aponta para mem2
+tmp = mem1 + 10;   // tmp = mem1 + 10
+tmp = tmp - 5;     // tmp = tmp - 5
+res = mem1 + mem2; // res = mem1 + mem2
+dif = mem2 - mem1; // dif = mem2 - mem1
 
-mem1 = mmap(0x1000, 32);
-mem2 = mmap(0x2000, 64);
+// Instruções de print
+print_n(mem1);     // Imprime mem1 como inteiro
+print_p(mem2);     // Imprime mem2 como ponteiro
+print_s(tmp);      // Imprime tmp como string
 
+// Labels e saltos
+label(loop);       // Define label 'loop'
+    print_n(res);  // Imprime res
+    res = res - 1; // Decrementa res
+    jump_eq(loop, res, 0);  // Salta para 'loop' se res == 0
 
-mem1 = mem2;
-tmp = mem1 + 10;
-tmp = tmp + 5;
-res = mem1 + mem2;
-dif = mem2 + mem1;
+label(end);        // Define label 'end'
+    jump_eq(end, dif, dif); // Loop infinito (dif == dif)
 
-
-print_n(mem1);
-print_p(mem2);
-print_s(tmp);
-
-
-label(loop);
-    print_n(res);
-    res = res - 1;
-    jump_eq(loop, res, 0);
-
-label(end);
-    jump_eq(end, dif, dif);
-
-
-Terminate();
+// Terminação
+Terminate();       // Termina o processo atual
