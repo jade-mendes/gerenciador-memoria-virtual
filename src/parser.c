@@ -24,7 +24,9 @@ typedef enum {
     INST_LABEL,
     INST_JUMP,
     INST_JUMP_EQ_VAR_NUM,
-    INST_JUMP_EQ_VAR_VAR
+    INST_JUMP_EQ_VAR_VAR,
+    INST_JUMP_N_EQ_VAR_NUM,
+    INST_JUMP_N_EQ_VAR_VAR
 } InstType;
 
 // Estrutura para argumentos de saltos
@@ -45,6 +47,8 @@ typedef union {
     JumpTarget jump;
     struct { JumpTarget target; char var[MAX_NAME_LEN]; int num; } jump_eq_varnum;
     struct { JumpTarget target; char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } jump_eq_varvar;
+    struct { JumpTarget target; char var[MAX_NAME_LEN]; int num; } jump_neq_varnum;
+    struct { JumpTarget target; char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } jump_neq_varvar;
 } InstArgs;
 
 // Estrutura de uma instrução
@@ -377,6 +381,59 @@ Instruction* parse_instructions(FILE* file, int* count) {
             }
             (*count)++;
         }
+        else if (strncmp(trimmed, "jump_neq(", 9) == 0) {
+            char* start = trimmed + 9;
+            char* end = strchr(start, ')');
+            if (!end) continue;
+            *end = '\0';
+
+            char* target = strtok(start, ",");
+            char* var = strtok(NULL, ",");
+            char* operand = strtok(NULL, ",");
+            if (!target || !var || !operand) continue;
+
+            target = trim(target);
+            var = trim(var);
+            operand = trim(operand);
+
+            // Verificar se o operando é número ou variável
+            bool is_num = true;
+            for (char* p = operand; *p; p++) {
+                if (!isdigit((unsigned char)*p) && *p != '-' && *p != '+') {
+                    is_num = false;
+                    break;
+                }
+            }
+
+            if (*count >= capacity) {
+                capacity = capacity ? capacity * 2 : 16;
+                instructions = realloc(instructions, capacity * sizeof(Instruction));
+            }
+
+            if (is_num) {
+                int num = atoi(operand);
+                instructions[*count] = (Instruction){
+                    .type = INST_JUMP_N_EQ_VAR_NUM,
+                    .args.jump_neq_varnum = {
+                        .target = {.index = -1},
+                        .num = num
+                    }
+                };
+                safe_strcpy(instructions[*count].args.jump_neq_varnum.target.label, target);
+                safe_strcpy(instructions[*count].args.jump_neq_varnum.var, var);
+            } else {
+                instructions[*count] = (Instruction){
+                    .type = INST_JUMP_N_EQ_VAR_VAR,
+                    .args.jump_neq_varvar = {
+                        .target = {.index = -1}
+                    }
+                };
+                safe_strcpy(instructions[*count].args.jump_neq_varvar.target.label, target);
+                safe_strcpy(instructions[*count].args.jump_neq_varvar.var1, var);
+                safe_strcpy(instructions[*count].args.jump_neq_varvar.var2, operand);
+            }
+            (*count)++;
+        }
     }
 
     // Resolver labels
@@ -403,6 +460,22 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 int idx = find_label(inst->args.jump_eq_varvar.target.label);
                 if (idx != -1) {
                     inst->args.jump_eq_varvar.target.index = idx;
+                }
+                break;
+            }
+
+            case INST_JUMP_N_EQ_VAR_NUM: {
+                int idx = find_label(inst->args.jump_neq_varnum.target.label);
+                if (idx != -1) {
+                    inst->args.jump_neq_varnum.target.index = idx;
+                }
+                break;
+            }
+
+            case INST_JUMP_N_EQ_VAR_VAR: {
+                int idx = find_label(inst->args.jump_neq_varvar.target.label);
+                if (idx != -1) {
+                    inst->args.jump_neq_varvar.target.index = idx;
                 }
                 break;
             }
@@ -505,6 +578,18 @@ int main(int argc, char* argv[]) {
                        instructions[i].args.jump_eq_varvar.target.index,
                        instructions[i].args.jump_eq_varvar.var1,
                        instructions[i].args.jump_eq_varvar.var2);
+                break;
+            case INST_JUMP_N_EQ_VAR_NUM:
+                printf("JUMP_N_EQ_VAR_NUM(%d, %s, %d)\n",
+                       instructions[i].args.jump_neq_varnum.target.index,
+                       instructions[i].args.jump_neq_varnum.var,
+                       instructions[i].args.jump_neq_varnum.num);
+                break;
+            case INST_JUMP_N_EQ_VAR_VAR:
+                printf("JUMP_N_EQ_VAR_VAR(%d, %s, %s)\n",
+                       instructions[i].args.jump_neq_varvar.target.index,
+                       instructions[i].args.jump_neq_varvar.var1,
+                       instructions[i].args.jump_neq_varvar.var2);
                 break;
             default:
                 printf("Instrução desconhecida\n");

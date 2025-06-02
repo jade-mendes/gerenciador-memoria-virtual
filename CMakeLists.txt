@@ -14,4 +14,5 @@ add_executable(gerenciador_memoria_virtual
         src/nalloc.c
         src/nalloc.h
         src/parser.c
+        src/TL.h
 )

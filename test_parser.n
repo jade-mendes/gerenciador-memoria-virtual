@@ -9,8 +9,8 @@ mem2 = mmap(0x2000, 64);  // Aloca 64 bytes em 0x2000
 
 // Operações com variáveis
 mem1 = mem2;       // mem1 aponta para mem2
-tmp = mem1 + 10;   // tmp = mem1 + 10
-tmp = tmp - 5;     // tmp = tmp - 5
+&tmp = mem1 + 10;   // tmp = mem1 + 10
+tmp = &tmp - 5;     // tmp = tmp - 5
 res = mem1 + mem2; // res = mem1 + mem2
 dif = mem2 - mem1; // dif = mem2 - mem1
 
@@ -24,6 +24,12 @@ label(loop);       // Define label 'loop'
     print_n(res);  // Imprime res
     res = res - 1; // Decrementa res
     jump_eq(loop, res, 0);  // Salta para 'loop' se res == 0
+
+// Labels e saltos
+label(loop2);       // Define label 'loop'
+    print_n(res);  // Imprime res
+    res = res - 1; // Decrementa res
+    jump_neq(loop2, res, 0);  // Salta para 'loop' se res == 0
 
 label(end);        // Define label 'end'
     jump_eq(end, dif, dif); // Loop infinito (dif == dif)
