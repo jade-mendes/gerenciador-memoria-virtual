@@ -60,31 +60,52 @@ print_p(mem2);
 print_s(tmp);
 ```
 
-### 5. Operações com Variáveis
-`var1 = var2;`  
-Cria var1 apontando para o mesmo endereço de var2
+### 5. Instruções de Entrada
+`input_n(var);`  
+Lê um número inteiro do usuário e armazena no endereço da variável
 
-`var1 = var2 + num;`  
-Soma constante numérica ao conteúdo de var2
-
-`var1 = var2 - num;`  
-Subtrai constante numérica do conteúdo de var2
-
-`var1 = var2 + var3;`  
-Soma conteúdos de variáveis
-
-`var1 = var2 - var3;`  
-Subtrai conteúdos de variáveis
+`input_s(var, size);`  
+Lê uma string do usuário e armazena no endereço da variável (máximo de `size` bytes)
 
 Exemplo:
 ```n
-mem1 = mem2;
-tmp = mem1 + 10;
+input_n(in1);
+input_s(in2, 12);
+```
+
+### 6. Operações com Variáveis
+`var1 = var2;`  
+Copia o **valor** de var2 para var1
+
+`&var1 = &var2;`  
+Faz var1 **apontar** para o mesmo endereço de var2
+
+`var1 = var2 + num;`  
+Soma constante numérica ao **valor** de var2
+
+`&var1 = &var1 + num;`  
+Ajusta o **ponteiro** em bytes (ex: `+4` para próximo inteiro)
+
+`var1 = var2 - num;`  
+Subtrai constante numérica do **valor** de var2
+
+`var1 = var2 + var3;`  
+Soma **valores** de variáveis
+
+`var1 = var2 - var3;`  
+Subtrai **valores** de variáveis
+
+Exemplo:
+```n
+mem1 = mem2;       // Copia valor
+&mem1 = &mem2;     // Compartilha endereço
+tmp = mem1 + 10;   // Soma valor
+&mem1 = &mem1 + 4; // Ajusta ponteiro
 res = mem1 + mem2;
 dif = mem2 - mem1;
 ```
 
-### 6. Controle de Fluxo
+### 7. Controle de Fluxo
 `label(name);`  
 Define um ponto de salto com o nome especificado
 
@@ -92,10 +113,10 @@ Define um ponto de salto com o nome especificado
 Salta para a instrução no índice especificado
 
 `jump_eq(index, var, num);`  
-Salta se conteúdo de var for igual a num
+Salta se **valor** de var for igual a num
 
 `jump_eq(index, var1, var2);`  
-Salta se conteúdos de var1 e var2 forem iguais
+Salta se **valores** de var1 e var2 forem iguais
 
 Exemplo:
 ```n
@@ -111,6 +132,7 @@ label(end);
 3. Endereços devem ser especificados em hexadecimal (ex: `0x1000`)
 4. Valores numéricos podem ser decimais ou hexadecimais
 5. Comentários começam com `//` e vão até o final da linha
+6. Operador `&` indica operações com ponteiros/endereços
 
 ## Exemplo Completo
 ```n
@@ -120,16 +142,22 @@ Create(backgr);
 
 mem1 = mmap(0x1000, 32);
 mem2 = mmap(0x2000, 64);
+in1 = mmap(0x3000, 4);
+str = mmap(0x4000, 20);
 
-mem1 = mem2;
-tmp = mem1 + 10;
-tmp = tmp - 5;
+input_n(in1);
+input_s(str, 20);
+
+mem1 = mem2;        // Copia valor
+&mem1 = &mem2;      // Compartilha endereço
+tmp = mem1 + 10;    // Soma valor
+&mem1 = &mem1 + 4;  // Ajusta ponteiro
 res = mem1 + mem2;
 dif = mem2 - mem1;
 
-print_n(mem1);
+print_n(in1);
 print_p(mem2);
-print_s(tmp);
+print_s(str);
 
 label(loop);
     print_n(res);
@@ -155,5 +183,6 @@ O parser gerará uma lista de instruções interpretáveis pelo simulador de mem
 - Não suporta operações matemáticas complexas
 - Não possui sistema de funções ou subrotinas
 - Tipagem estática implícita
+- Ponteiros não têm aritmética baseada em tipo (sempre em bytes)
 
 Esta documentação cobre todos os aspectos essenciais da linguagem N para desenvolvimento de programas para o simulador de memória virtual.

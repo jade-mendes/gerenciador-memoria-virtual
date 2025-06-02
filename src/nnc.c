@@ -5,6 +5,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 #define MAX_NAME_LEN 8 // 7 caracteres + \0
 
@@ -543,23 +545,30 @@ void free_instructions(Instruction* insts, int count) {
     free_label_table();
 }
 
-int main(int argc, char* argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Uso: %s <arquivo_de_entrada>\n", argv[0]);
-        return 1;
+/// Function to get the amount of instructions from the compiled binary.
+size_t instructions_amount(const int fd) {
+    const size_t file_size = lseek(fd, 0, SEEK_END);
+    if (file_size == (size_t)-1) {
+        perror("Erro ao obter tamanho do arquivo");
+        return 0;
     }
+    lseek(fd, 0, SEEK_SET); // Volta para o início do arquivo
+    return file_size / sizeof(Instruction); // Retorna a quantidade de instruções
+}
 
-    FILE* file = fopen(argv[1], "r");
-    if (!file) {
-        perror("Erro ao abrir arquivo");
-        return 1;
+/// function to get the instructions from the compiled binary.
+void get_instructions(const int fd, void* buffer) {
+    const ssize_t bytes_read = read(fd, buffer, sizeof(Instruction) * instructions_amount(fd));
+    if (bytes_read == -1) {
+        perror("Erro ao ler arquivo");
+        return;
     }
+    if (bytes_read % sizeof(Instruction) != 0) {
+        fprintf(stderr, "Tamanho do arquivo inválido\n");
+    }
+}
 
-    int count;
-    Instruction* instructions = parse_instructions(file, &count);
-    fclose(file);
-
-    // Exemplo de uso: imprimir as instruções parseadas
+void print_instructions(const size_t count, Instruction *instructions) {
     for (int i = 0; i < count; i++) {
         printf("Instrução %d: ", i);
         switch (instructions[i].type) {
@@ -653,7 +662,40 @@ int main(int argc, char* argv[]) {
                 break;
         }
     }
+}
 
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Uso: %s <arquivo_de_entrada> [<arquivo_de_saida>]\n", argv[0]);
+        return 1;
+    }
+
+    FILE* file = fopen(argv[1], "r");
+    if (!file) {
+        perror("Erro ao abrir arquivo");
+        return 1;
+    }
+
+    int count;
+    Instruction* instructions = parse_instructions(file, &count);
+    fclose(file);
+
+    print_instructions(count, instructions);
+
+    int output_file = open(argc > 2 ? argv[2] : "output.bin", O_RDWR | O_CREAT | O_TRUNC, 0644);
+    if (output_file != -1) {
+        write(output_file, instructions, count * sizeof(Instruction));
+    }
+    else {
+        perror("Erro ao abrir arquivo de saída");
+    }
     free_instructions(instructions, count);
+
+    size_t n = instructions_amount(output_file);
+    printf("Quantidade de instruções: %zu\n", n);
+    char buf[n * sizeof(Instruction)];
+    get_instructions(output_file, buf);
+    Instruction* read_instructions = (Instruction*)buf;
+    print_instructions(n, read_instructions);
     return 0;
 }

@@ -13,6 +13,6 @@ add_executable(gerenciador_memoria_virtual
         src/simulador_page.h
         src/nalloc.c
         src/nalloc.h
-        src/parser.c
+        src/nnc.c
         src/TL.h
 )
