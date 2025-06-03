@@ -802,7 +802,7 @@ int main(int argc, char* argv[]) {
 
     size_t n = instructions_amount(output_file);
     printf("Quantidade de instruções: %zu\n", n);
-    char buf[n * sizeof(Instruction)];
+    Instruction buf[n];
     get_instructions(output_file, buf);
     Instruction* read_instructions = buf;
     print_instructions(n, read_instructions);
