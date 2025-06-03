@@ -15,4 +15,10 @@ add_executable(gerenciador_memoria_virtual
         src/nalloc.h
         src/nnc.c
         src/TL.h
+        src/n.h
+        src/n_interpreter.h
+        src/n_interpreter.c
+        src/process.h
+        src/HashMap.c
+        src/HashMap.h
 )

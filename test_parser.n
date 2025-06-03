@@ -41,3 +41,14 @@ label(end);        // Define label 'end'
 
 // Terminação
 Terminate();       // Termina o processo atual
+
+label(loop3);       // Define label 'loop3'
+    print_n(res);  // Imprime res
+    res = res + 1; // Incrementa res
+    jump_lt(loop3, res, 10);  // Salta para 'loop3' se res < 10
+
+label(loop4);       // Define label 'loop4'
+    print_n(res);  // Imprime res
+    res = res + 1; // Incrementa res
+    jump_gt(loop4, res, 10);  // Salta para 'loop4' se res > 10
+

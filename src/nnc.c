@@ -8,60 +8,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define MAX_NAME_LEN 8 // 7 caracteres + \0
-
-// Enumeração dos tipos de instrução
-typedef enum {
-    INST_CREATE,
-    INST_TERMINATE,
-    INST_MMAP,
-    INST_PRINT_N,
-    INST_PRINT_P,
-    INST_PRINT_S,
-    INST_ASSIGN,
-    INST_ASSIGN_ADD_NUM,
-    INST_ASSIGN_SUB_NUM,
-    INST_ASSIGN_ADD_VAR,
-    INST_ASSIGN_SUB_VAR,
-    INST_LABEL,
-    INST_JUMP,
-    INST_JUMP_EQ_VAR_NUM,
-    INST_JUMP_EQ_VAR_VAR,
-    INST_JUMP_N_EQ_VAR_NUM,
-    INST_JUMP_N_EQ_VAR_VAR,
-    INST_INPUT_N,
-    INST_INPUT_S,
-} InstType;
-
-// Estrutura para argumentos de saltos
-typedef struct {
-    int index;      // Índice numérico (se usado)
-    char label[MAX_NAME_LEN];    // Nome da label
-} JumpTarget;
-
-// União para argumentos de instruções
-typedef union {
-    struct { char process_name[MAX_NAME_LEN]; } create;
-    struct { char var_name[MAX_NAME_LEN]; uintptr_t add_like; int size; } mmap;
-    struct { char var_name[MAX_NAME_LEN]; } print;
-    struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } assign;
-    struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; int num; } assign_num;
-    struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; char var3[MAX_NAME_LEN]; } assign_var;
-    struct { char label_name[MAX_NAME_LEN]; } label;
-    JumpTarget jump;
-    struct { JumpTarget target; char var[MAX_NAME_LEN]; int num; } jump_eq_varnum;
-    struct { JumpTarget target; char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } jump_eq_varvar;
-    struct { JumpTarget target; char var[MAX_NAME_LEN]; int num; } jump_neq_varnum;
-    struct { JumpTarget target; char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } jump_neq_varvar;
-    struct { char var_name[MAX_NAME_LEN]; } input_n;
-    struct { char var_name[MAX_NAME_LEN]; int size; } input_s;
-} InstArgs;
-
-// Estrutura de uma instrução
-typedef struct {
-    InstType type;
-    InstArgs args;
-} Instruction;
+#include  "n.h"
 
 // Tabela de símbolos para labels
 typedef struct LabelEntry {
@@ -440,6 +387,112 @@ Instruction* parse_instructions(FILE* file, int* count) {
             }
             (*count)++;
         }
+        else if (strncmp(trimmed, "jump_lt(", 8) == 0) {
+            char* start = trimmed + 8;
+            char* end = strchr(start, ')');
+            if (!end) continue;
+            *end = '\0';
+
+            char* target = strtok(start, ",");
+            char* var = strtok(NULL, ",");
+            char* operand = strtok(NULL, ",");
+            if (!target || !var || !operand) continue;
+
+            target = trim(target);
+            var = trim(var);
+            operand = trim(operand);
+
+            // Verificar se o operando é número ou variável
+            bool is_num = true;
+            for (char* p = operand; *p; p++) {
+                if (!isdigit((unsigned char)*p) && *p != '-' && *p != '+') {
+                    is_num = false;
+                    break;
+                }
+            }
+
+            if (*count >= capacity) {
+                capacity = capacity ? capacity * 2 : 16;
+                instructions = realloc(instructions, capacity * sizeof(Instruction));
+            }
+
+            if (is_num) {
+                int num = atoi(operand);
+                instructions[*count] = (Instruction){
+                    .type = INST_JUMP_LT_VAR_NUM,
+                    .args.jump_lt_varnum = {
+                        .target = {.index = -1},
+                        .num = num
+                    }
+                };
+                safe_strcpy(instructions[*count].args.jump_lt_varnum.target.label, target);
+                safe_strcpy(instructions[*count].args.jump_lt_varnum.var, var);
+            } else {
+                instructions[*count] = (Instruction){
+                    .type = INST_JUMP_LT_VAR_VAR,
+                    .args.jump_lt_varvar = {
+                        .target = {.index = -1}
+                    }
+                };
+                safe_strcpy(instructions[*count].args.jump_lt_varvar.target.label, target);
+                safe_strcpy(instructions[*count].args.jump_lt_varvar.var1, var);
+                safe_strcpy(instructions[*count].args.jump_lt_varvar.var2, operand);
+            }
+            (*count)++;
+        }
+        else if (strncmp(trimmed, "jump_gt(", 8) == 0) {
+            char* start = trimmed + 8;
+            char* end = strchr(start, ')');
+            if (!end) continue;
+            *end = '\0';
+
+            char* target = strtok(start, ",");
+            char* var = strtok(NULL, ",");
+            char* operand = strtok(NULL, ",");
+            if (!target || !var || !operand) continue;
+
+            target = trim(target);
+            var = trim(var);
+            operand = trim(operand);
+
+            // Verificar se o operando é número ou variável
+            bool is_num = true;
+            for (char* p = operand; *p; p++) {
+                if (!isdigit((unsigned char)*p) && *p != '-' && *p != '+') {
+                    is_num = false;
+                    break;
+                }
+            }
+
+            if (*count >= capacity) {
+                capacity = capacity ? capacity * 2 : 16;
+                instructions = realloc(instructions, capacity * sizeof(Instruction));
+            }
+
+            if (is_num) {
+                int num = atoi(operand);
+                instructions[*count] = (Instruction){
+                    .type = INST_JUMP_GT_VAR_NUM,
+                    .args.jump_gt_varnum = {
+                        .target = {.index = -1},
+                        .num = num
+                    }
+                };
+                safe_strcpy(instructions[*count].args.jump_gt_varnum.target.label, target);
+                safe_strcpy(instructions[*count].args.jump_gt_varnum.var, var);
+            } else {
+                instructions[*count] = (Instruction){
+                    .type = INST_JUMP_GT_VAR_VAR,
+                    .args.jump_gt_varvar = {
+                        .target = {.index = -1}
+                    }
+                };
+                safe_strcpy(instructions[*count].args.jump_gt_varvar.target.label, target);
+                safe_strcpy(instructions[*count].args.jump_gt_varvar.var1, var);
+                safe_strcpy(instructions[*count].args.jump_gt_varvar.var2, operand);
+            }
+            (*count)++;
+        }
         else if (strncmp(trimmed, "input_n(", 8) == 0) {
             char* start = trimmed + 8;
             char* end = strchr(start, ')');
@@ -531,6 +584,38 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 break;
             }
 
+            case INST_JUMP_LT_VAR_NUM: {
+                int idx = find_label(inst->args.jump_lt_varnum.target.label);
+                if (idx != -1) {
+                    inst->args.jump_lt_varnum.target.index = idx;
+                }
+                break;
+            }
+
+            case INST_JUMP_LT_VAR_VAR: {
+                int idx = find_label(inst->args.jump_lt_varvar.target.label);
+                if (idx != -1) {
+                    inst->args.jump_lt_varvar.target.index = idx;
+                }
+                break;
+            }
+
+            case INST_JUMP_GT_VAR_NUM: {
+                int idx = find_label(inst->args.jump_gt_varnum.target.label);
+                if (idx != -1) {
+                    inst->args.jump_gt_varnum.target.index = idx;
+                }
+                break;
+            }
+
+            case INST_JUMP_GT_VAR_VAR: {
+                int idx = find_label(inst->args.jump_gt_varvar.target.label);
+                if (idx != -1) {
+                    inst->args.jump_gt_varvar.target.index = idx;
+                }
+                break;
+            }
+
             default:
                 break;
         }
@@ -557,7 +642,7 @@ size_t instructions_amount(const int fd) {
 }
 
 /// function to get the instructions from the compiled binary.
-void get_instructions(const int fd, void* buffer) {
+void get_instructions(const int fd, Instruction* buffer) {
     const ssize_t bytes_read = read(fd, buffer, sizeof(Instruction) * instructions_amount(fd));
     if (bytes_read == -1) {
         perror("Erro ao ler arquivo");
@@ -649,6 +734,30 @@ void print_instructions(const size_t count, Instruction *instructions) {
                        instructions[i].args.jump_neq_varvar.var1,
                        instructions[i].args.jump_neq_varvar.var2);
                 break;
+            case INST_JUMP_LT_VAR_NUM:
+                printf("JUMP_LT_VAR_NUM(%d, %s, %d)\n",
+                       instructions[i].args.jump_lt_varnum.target.index,
+                       instructions[i].args.jump_lt_varnum.var,
+                       instructions[i].args.jump_lt_varnum.num);
+                break;
+            case INST_JUMP_LT_VAR_VAR:
+                printf("JUMP_LT_VAR_VAR(%d, %s, %s)\n",
+                       instructions[i].args.jump_lt_varvar.target.index,
+                       instructions[i].args.jump_lt_varvar.var1,
+                       instructions[i].args.jump_lt_varvar.var2);
+                break;
+            case INST_JUMP_GT_VAR_NUM:
+                printf("JUMP_GT_VAR_NUM(%d, %s, %d)\n",
+                        instructions[i].args.jump_gt_varnum.target.index,
+                        instructions[i].args.jump_gt_varnum.var,
+                        instructions[i].args.jump_gt_varnum.num);
+                break;
+            case INST_JUMP_GT_VAR_VAR:
+                printf("JUMP_GT_VAR_VAR(%d, %s, %s)\n",
+                       instructions[i].args.jump_gt_varvar.target.index,
+                       instructions[i].args.jump_gt_varvar.var1,
+                       instructions[i].args.jump_gt_varvar.var2);
+                break;
             case INST_INPUT_N:
                 printf("INPUT_N(%s)\n", instructions[i].args.input_n.var_name);
                 break;
@@ -695,7 +804,7 @@ int main(int argc, char* argv[]) {
     printf("Quantidade de instruções: %zu\n", n);
     char buf[n * sizeof(Instruction)];
     get_instructions(output_file, buf);
-    Instruction* read_instructions = (Instruction*)buf;
+    Instruction* read_instructions = buf;
     print_instructions(n, read_instructions);
     return 0;
 }
