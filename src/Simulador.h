@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "nalloc.h"
 #include "ProcessHashMap.h"
+#include "ProcessQueue.h"
 #ifndef SIMULADOR_H
 
 typedef enum {

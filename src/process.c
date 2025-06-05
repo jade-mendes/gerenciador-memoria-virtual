@@ -7,6 +7,10 @@
 
 #include "process.h"
 
+#include <string.h>
+
+#include "Simulador.h"
+
 
 
 // Função para criar um novo processo
@@ -27,7 +31,7 @@ Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruct
 
     // Inicializa estruturas de dados do processo
     new_process->page_table = criar_page_table(sim->config.PAGE_SIZE); // Função hipotética
-    new_process->variables_adrr = hashmap_create(sim->main_memory_ctx, 10); // Função hipotética
+    new_process->variables_adrr = hashmap_create(sim->main_memory_ctx, 10);
 
     // Adiciona ao mapa de processos principal
     process_hashmap_put(sim->process_map_main, pid, new_process);
@@ -173,10 +177,8 @@ void proxima_acao(Simulador* sim) {
 
     // Executa próxima instrução
     if (sim->current_process->instruction_index < sim->current_process->instruction_count) {
-        Instruction* current = &sim->current_process->instructions[sim->current_process->instruction_index];
 
         // Simula execução da instrução
-        // ... (lógica de execução aqui)
 
         sim->current_process->instruction_index++;
         sim->current_process->time_slice_remaining--;
