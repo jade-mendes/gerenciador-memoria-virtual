@@ -19,7 +19,7 @@ typedef struct nalloc_context {
 // Interface pública da biblioteca
 
 // Inicializa um novo contexto de alocação
-void nalloc_init(void* buffer, size_t size);
+NallocContext nalloc_init(void* buffer, size_t size);
 
 // Aloca memória no contexto especificado
 void* nalloc_alloc(NallocContext* ctx, size_t size);

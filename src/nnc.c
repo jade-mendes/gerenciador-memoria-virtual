@@ -30,7 +30,7 @@ void add_label(const char* name, int index) {
 }
 
 int find_label(const char* name) {
-    LabelEntry* current = label_table;
+    const LabelEntry* current = label_table;
     char search_name[MAX_NAME_LEN];
     strncpy(search_name, name, MAX_NAME_LEN - 1);
     search_name[MAX_NAME_LEN - 1] = '\0';

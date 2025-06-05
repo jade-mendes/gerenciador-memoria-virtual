@@ -20,7 +20,7 @@ typedef enum {
 typedef struct {
     uint32_t pid;
     char name[16];
-    PAGE_TABLE *page_table;
+    PAGE_TABLE* page_table;
 
     ProcessState state;
 

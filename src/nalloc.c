@@ -14,7 +14,7 @@ typedef struct nalloc_context {
 } NallocContext;
 
 // Inicializa um novo contexto de alocação
-void nalloc_init(void* buffer, const size_t size) {
+NallocContext nalloc_init(void* buffer, const size_t size) {
     NallocContext ctx;
     ctx.base_addr = buffer;
     ctx.total_size = size;
@@ -23,6 +23,7 @@ void nalloc_init(void* buffer, const size_t size) {
     BlockHeader* header = buffer;
     header->size = size - sizeof(BlockHeader);
     header->is_free = true;
+    return ctx;
 }
 
 // Aloca memória no contexto especificado
@@ -178,11 +179,7 @@ void nalloc_print_memory(NallocContext* ctx) {
 //     char buffer[BUFFER_SIZE];
 //
 //     // 1. Inicialização do alocador
-//     nalloc_init(buffer, BUFFER_SIZE);
-//     NallocContext ctx = {
-//         .base_addr = buffer,
-//         .total_size = BUFFER_SIZE
-//     };
+//     NallocContext ctx = nalloc_init(buffer, BUFFER_SIZE);
 //
 //     printf("=== Estado Inicial ===\n");
 //     nalloc_print_memory(&ctx);
