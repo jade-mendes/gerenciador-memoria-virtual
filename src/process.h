@@ -10,7 +10,9 @@
 #include <stdint.h>
 #include "HashMap.h"
 #include "n.h"
-#include "Simulador.h"
+
+typedef struct Simulador Simulador;
+typedef struct PAGE_TABLE PAGE_TABLE;
 
 typedef enum {
     PROCESS_RUNNING,
@@ -20,7 +22,7 @@ typedef enum {
 } ProcessState;
 
 
-typedef struct {
+typedef struct Process {
     uint32_t pid;
     char name[16];
     PAGE_TABLE* page_table;

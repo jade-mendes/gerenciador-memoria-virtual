@@ -4,14 +4,12 @@
 #pragma once
 
 #ifndef SIMULADOR_H
+#define SIMULADOR_H
 
 #include <stdint.h>
 #include "nalloc.h"
-#include "Process.h"
 #include "ProcessHashMap.h"
 #include "ProcessQueue.h"
-
-#define SIMULADOR_H
 
 
 
@@ -28,7 +26,7 @@ typedef struct {
     bool referenced;
 } PAGE_TABLE_ENTRY;
 
-typedef struct {
+typedef struct PAGE_TABLE {
     PAGE_TABLE_ENTRY* entries;
     uint32_t num_entries;
 } PAGE_TABLE;
@@ -64,7 +62,7 @@ typedef struct {
 } SimulationConfig;
 
 
-typedef struct {
+typedef struct Simulador {
     SimulationConfig config;
     ProcessHashMap* process_map_main;
     ProcessHashMap* process_map_secondary;
@@ -79,17 +77,17 @@ typedef struct {
 } Simulador;
 
 // Funções de gerenciamento da TLB
-bool tlb_lookup(TLB* tlb, uint32_t page, void** frame);
+bool tlb_lookup(TLB* tlb, const uint32_t page, uintptr_t* frame);
 void tlb_update(TLB* tlb, const uint32_t page, const uint32_t frame);
-void tlb_invalidate_entry(TLB* tlb, uint32_t page);
-void reset_tlb_validity(TLB* tlb);
+void tlb_invalidate_entry(const TLB* tlb, const uint32_t page);
+void reset_tlb_validity(const TLB* tlb);
 
 // Funções de acesso à memória
-uint8_t get_mem(Simulador* s, Process* p, uint32_t virt_addr, int* out_status);
-void set_mem(Simulador* s, Process* p, uint32_t virt_addr, uint8_t value, int* out_status);
+uint8_t get_mem(const Simulador* s, Process* p, const uint32_t virt_addr, int* out_status);
+void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uint8_t value, int* out_status);
 
 // Funções de gerenciamento de páginas
-bool allocate_page(Simulador* s, Process* p, uint32_t virt_addr);
+bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr);
 void deallocate_page(Simulador* s, Process* p, uint32_t virt_addr);
 
 // Funções de criação/destruição

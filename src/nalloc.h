@@ -28,7 +28,7 @@ void* nalloc_alloc(const NallocContext* ctx, size_t size);
 void nalloc_free(const NallocContext* ctx, void* ptr);
 
 // Realoca memória no contexto especificado
-void* nalloc_realloc(NallocContext* ctx, void* ptr, size_t size);
+void* nalloc_realloc(const NallocContext* ctx, void* ptr, size_t size);
 
 // Calcula o total de memória alocada no contexto
 size_t nalloc_allocated_size(NallocContext* ctx);

@@ -5,13 +5,15 @@
 
 
 #ifndef PROCESSQUEUE_H
-#include "process.h"
+#define PROCESSQUEUE_H
+
 #include "nalloc.h"
 
-struct Process;
+typedef struct Process Process;
+
 
 typedef struct ProcessQueueNode {
-    struct Process* process;
+    Process* process;
     struct ProcessQueueNode* next;
 } ProcessQueueNode;
 
@@ -26,7 +28,7 @@ typedef struct {
 ProcessQueue* process_queue_create(NallocContext* ctx);
 
 // Adiciona um processo ao final da fila
-bool process_queue_enqueue(ProcessQueue* queue, struct Process* process);
+bool process_queue_enqueue(ProcessQueue* queue, Process* process);
 
 // Remove e retorna o processo do início da fila
 struct Process* process_queue_dequeue(ProcessQueue* queue);
@@ -41,6 +43,6 @@ size_t process_queue_size(const ProcessQueue* queue);
 void process_queue_destroy(ProcessQueue* queue);
 
 
-#define PROCESSQUEUE_H
+
 
 #endif //PROCESSQUEUE_H

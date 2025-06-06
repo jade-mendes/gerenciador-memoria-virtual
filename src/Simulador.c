@@ -4,6 +4,7 @@
 
 
 #include "Simulador.h"
+#include "Process.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -176,7 +177,7 @@ bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
     if (page_num >= p->page_table->num_entries) {
         uint32_t new_num_entries = page_num + 1;
         PAGE_TABLE_ENTRY* new_entries = nalloc_realloc(
-            s->main_memory_ctx,
+            &s->main_memory_ctx,
             p->page_table->entries,
             new_num_entries * sizeof(PAGE_TABLE_ENTRY)
         );
@@ -212,9 +213,9 @@ void deallocate_page(Simulador* s, Process* p, uint32_t virt_addr) {
         return;
     }
 
-    void* frame_addr = p->page_table->entries[page_num].frame;
+    void* frame_addr = (void*) p->page_table->entries[page_num].frame;
 
-    nalloc_free(s->main_memory_ctx, frame_addr);
+    nalloc_free(&s->main_memory_ctx, frame_addr);
     p->page_table->entries[page_num].valid = false;
     tlb_invalidate_entry(s->tlb, page_num);
 }
@@ -311,7 +312,7 @@ int main() {
     uint32_t page_num = virt_addr / PAGE_SIZE;
     assert(page_num < proc.page_table->num_entries);
     assert(proc.page_table->entries[page_num].valid);
-    assert(proc.page_table->entries[page_num].frame != NULL);
+    assert(proc.page_table->entries[page_num].frame != 0);
 
     printf("\n=== Teste 2: Escrita e leitura de memória ===\n");
     int status;
@@ -335,7 +336,7 @@ int main() {
     assert(proc.page_table->entries[page_num].dirty);
 
     printf("\n=== Teste 3: Verificação da TLB ===\n");
-    void* frame_addr;
+    uintptr_t frame_addr;
     bool tlb_hit = tlb_lookup(sim.tlb, page_num, &frame_addr);
     printf("TLB lookup: %s\n", tlb_hit ? "HIT" : "MISS");
     assert(tlb_hit);

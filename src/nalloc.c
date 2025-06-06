@@ -69,7 +69,7 @@ void nalloc_free(const NallocContext* ctx, void* ptr) {
 }
 
 // Realoca memória no contexto especificado
-void* nalloc_realloc(NallocContext* ctx, void* ptr, size_t size) {
+void* nalloc_realloc(const NallocContext* ctx, void* ptr, size_t size) {
     if (!ptr) return nalloc_alloc(ctx, size);
 
     BlockHeader* header = (BlockHeader*)((char*)ptr - sizeof(BlockHeader));

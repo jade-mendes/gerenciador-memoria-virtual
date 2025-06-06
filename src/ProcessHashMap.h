@@ -5,7 +5,13 @@
 
 
 #ifndef PROCESSHASHMAP_H
-#include "process.h"
+#define PROCESSHASHMAP_H
+#include <stdint.h>
+
+#include "nalloc.h"
+
+typedef struct Process Process;
+
 
 typedef struct ProcessHashMapEntry {
     uint32_t key;                       // PID
@@ -35,6 +41,6 @@ bool process_hashmap_remove(ProcessHashMap* map, uint32_t pid);
 void process_hashmap_destroy(ProcessHashMap* map);
 
 
-#define PROCESSHASHMAP_H
+
 
 #endif //PROCESSHASHMAP_H
