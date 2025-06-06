@@ -27,4 +27,5 @@ add_executable(gerenciador_memoria_virtual
         src/ProcessHashMap.c
         src/ProcessQueue.h
         src/ProcessQueue.c
+        src/Simulador.c
 )

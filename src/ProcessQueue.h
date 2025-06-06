@@ -2,13 +2,16 @@
 // Created by Nathan Pinheiro on 05/06/2025.
 //
 #pragma once
-#include "nalloc.h"
-#include "process.h"
+
 
 #ifndef PROCESSQUEUE_H
+#include "process.h"
+#include "nalloc.h"
+
+struct Process;
 
 typedef struct ProcessQueueNode {
-    Process* process;
+    struct Process* process;
     struct ProcessQueueNode* next;
 } ProcessQueueNode;
 
@@ -23,10 +26,10 @@ typedef struct {
 ProcessQueue* process_queue_create(NallocContext* ctx);
 
 // Adiciona um processo ao final da fila
-bool process_queue_enqueue(ProcessQueue* queue, Process* process);
+bool process_queue_enqueue(ProcessQueue* queue, struct Process* process);
 
 // Remove e retorna o processo do início da fila
-Process* process_queue_dequeue(ProcessQueue* queue);
+struct Process* process_queue_dequeue(ProcessQueue* queue);
 
 // Verifica se a fila está vazia
 bool process_queue_is_empty(const ProcessQueue* queue);

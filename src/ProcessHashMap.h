@@ -2,9 +2,10 @@
 // Created by Nathan Pinheiro on 05/06/2025.
 //
 #pragma once
-#include "process.h"
+
 
 #ifndef PROCESSHASHMAP_H
+#include "process.h"
 
 typedef struct ProcessHashMapEntry {
     uint32_t key;                       // PID

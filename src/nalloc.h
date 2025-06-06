@@ -22,10 +22,10 @@ typedef struct nalloc_context {
 NallocContext nalloc_init(void* buffer, size_t size);
 
 // Aloca memória no contexto especificado
-void* nalloc_alloc(NallocContext* ctx, size_t size);
+void* nalloc_alloc(const NallocContext* ctx, size_t size);
 
 // Libera memória no contexto especificado
-void nalloc_free(NallocContext* ctx, void* ptr);
+void nalloc_free(const NallocContext* ctx, void* ptr);
 
 // Realoca memória no contexto especificado
 void* nalloc_realloc(NallocContext* ctx, void* ptr, size_t size);

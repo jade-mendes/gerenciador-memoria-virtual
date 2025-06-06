@@ -29,7 +29,7 @@ ProcessHashMap* process_hashmap_create(NallocContext* ctx, size_t capacity) {
     return map;
 }
 
-bool process_hashmap_put(ProcessHashMap* map, uint32_t pid, Process* process) {
+bool process_hashmap_put(struct ProcessHashMap* map, uint32_t pid, struct Process* process) {
     size_t index = pid_hash_func(pid, map->capacity);
     ProcessHashMapEntry* current = map->buckets[index];
 

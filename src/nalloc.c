@@ -27,7 +27,7 @@ NallocContext nalloc_init(void* buffer, const size_t size) {
 }
 
 // Aloca memória no contexto especificado
-void* nalloc_alloc(NallocContext* ctx, size_t size) {
+void* nalloc_alloc(const NallocContext* ctx, const size_t size) {
     void* current = ctx->base_addr;
     const void* end = (char*)ctx->base_addr + ctx->total_size;
 
@@ -55,7 +55,7 @@ void* nalloc_alloc(NallocContext* ctx, size_t size) {
 }
 
 // Libera memória no contexto especificado
-void nalloc_free(NallocContext* ctx, void* ptr) {
+void nalloc_free(const NallocContext* ctx, void* ptr) {
     if (!ptr) return;
 
     BlockHeader* header = (BlockHeader*)((char*)ptr - sizeof(BlockHeader));
@@ -131,7 +131,7 @@ void nalloc_print_memory(NallocContext* ctx) {
     double accumulated = 0.0;
 
     while (current < end && bar_index < bar_width) {
-        BlockHeader* header = (BlockHeader*)current;
+        BlockHeader* header = current;
         size_t block_size = sizeof(BlockHeader) + header->size;
         double block_units = block_size / unit_size;
 
