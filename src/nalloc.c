@@ -32,7 +32,7 @@ void* nalloc_alloc(const NallocContext* ctx, const size_t size) {
     const void* end = (char*)ctx->base_addr + ctx->total_size;
 
     while (current < end) {
-        BlockHeader* header = (BlockHeader*)current;
+        BlockHeader* header = current;
 
         if (header->is_free && header->size >= size) {
             // Verifica se pode dividir o bloco
@@ -156,6 +156,7 @@ void nalloc_print_memory(NallocContext* ctx) {
         visual[bar_index] = '?';
     }
 
+    printf("Memória inicia em %p vai até %p (%zu bytes)\n",ctx->base_addr, (char*)ctx->base_addr + ctx->total_size, ctx->total_size);
     // Imprime a barra colorida
     printf("[");
     for (int i = 0; i < bar_width; i++) {

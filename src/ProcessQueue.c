@@ -7,8 +7,8 @@
 #include "nalloc.h"
 #include <stddef.h>
 
-ProcessQueue* process_queue_create(NallocContext* ctx) {
-    ProcessQueue* queue = nalloc_alloc(ctx, sizeof(ProcessQueue));
+ProcessQueue* process_queue_create(NallocContext ctx) {
+    ProcessQueue* queue = nalloc_alloc(&ctx, sizeof(ProcessQueue));
     if (!queue) return NULL;
 
     queue->nalloc_ctx = ctx;
@@ -21,7 +21,7 @@ ProcessQueue* process_queue_create(NallocContext* ctx) {
 bool process_queue_enqueue(ProcessQueue* queue, Process* process) {
     if (!queue || !process) return false;
 
-    ProcessQueueNode* new_node = nalloc_alloc(queue->nalloc_ctx, sizeof(ProcessQueueNode));
+    ProcessQueueNode* new_node = nalloc_alloc(&queue->nalloc_ctx, sizeof(ProcessQueueNode));
     if (!new_node) return false;
 
     new_node->process = process;
@@ -56,7 +56,7 @@ Process* process_queue_dequeue(ProcessQueue* queue) {
     }
 
     // Libera o nó, mas mantém o processo
-    nalloc_free(queue->nalloc_ctx, temp);
+    nalloc_free(&queue->nalloc_ctx, temp);
     queue->size--;
     return process;
 }
@@ -78,5 +78,5 @@ void process_queue_destroy(ProcessQueue* queue) {
     }
 
     // Libera a estrutura principal
-    nalloc_free(queue->nalloc_ctx, queue);
+    nalloc_free(&queue->nalloc_ctx, queue);
 }

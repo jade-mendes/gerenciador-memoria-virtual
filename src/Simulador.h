@@ -76,9 +76,15 @@ typedef struct Simulador {
     TLB* tlb;
 } Simulador;
 
+// Funções do simulador
+Simulador create_simulator(const SimulationConfig config);
+void destroy_simulator(Simulador* sim);
+
+
+
 // Funções de gerenciamento da TLB
 bool tlb_lookup(TLB* tlb, const uint32_t page, uintptr_t* frame);
-void tlb_update(TLB* tlb, const uint32_t page, const uint32_t frame);
+void tlb_update(TLB* tlb, const uint32_t page, const uintptr_t frame);
 void tlb_invalidate_entry(const TLB* tlb, const uint32_t page);
 void reset_tlb_validity(const TLB* tlb);
 

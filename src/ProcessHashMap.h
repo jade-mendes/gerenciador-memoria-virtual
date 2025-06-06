@@ -20,13 +20,13 @@ typedef struct ProcessHashMapEntry {
 } ProcessHashMapEntry;
 
 typedef struct ProcessHashMap {
-    NallocContext* nalloc_ctx;      // Contexto de alocação
+    NallocContext nalloc_ctx;      // Contexto de alocação
     size_t capacity;                // Capacidade total (número de buckets)
     ProcessHashMapEntry** buckets;  // Array de buckets
 } ProcessHashMap;
 
 // Cria um novo hashmap
-ProcessHashMap* process_hashmap_create(NallocContext* ctx, size_t capacity);
+ProcessHashMap* process_hashmap_create(NallocContext ctx, size_t capacity);
 
 // Insere ou atualiza um processo no hashmap
 bool process_hashmap_put(ProcessHashMap* map, uint32_t pid, Process* process);

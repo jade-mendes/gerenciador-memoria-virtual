@@ -12,16 +12,16 @@ static size_t pid_hash_func(uint32_t key, size_t capacity) {
     return (key * 2654435761U) % capacity; // Multiplicação por primo grande
 }
 
-ProcessHashMap* process_hashmap_create(NallocContext* ctx, size_t capacity) {
-    ProcessHashMap* map = nalloc_alloc(ctx, sizeof(ProcessHashMap));
+ProcessHashMap* process_hashmap_create(NallocContext ctx, size_t capacity) {
+    ProcessHashMap* map = nalloc_alloc(&ctx, sizeof(ProcessHashMap));
     if (!map) return NULL;
 
     map->nalloc_ctx = ctx;
     map->capacity = capacity;
-    map->buckets = nalloc_alloc(ctx, capacity * sizeof(ProcessHashMapEntry*));
+    map->buckets = nalloc_alloc(&ctx, capacity * sizeof(ProcessHashMapEntry*));
 
     if (!map->buckets) {
-        nalloc_free(ctx, map);
+        nalloc_free(&ctx, map);
         return NULL;
     }
 
@@ -29,7 +29,7 @@ ProcessHashMap* process_hashmap_create(NallocContext* ctx, size_t capacity) {
     return map;
 }
 
-bool process_hashmap_put(struct ProcessHashMap* map, uint32_t pid, struct Process* process) {
+bool process_hashmap_put(ProcessHashMap* map, uint32_t pid, Process* process) {
     size_t index = pid_hash_func(pid, map->capacity);
     ProcessHashMapEntry* current = map->buckets[index];
 
@@ -43,7 +43,7 @@ bool process_hashmap_put(struct ProcessHashMap* map, uint32_t pid, struct Proces
     }
 
     // Cria nova entrada
-    ProcessHashMapEntry* new_entry = nalloc_alloc(map->nalloc_ctx, sizeof(ProcessHashMapEntry));
+    ProcessHashMapEntry* new_entry = nalloc_alloc(&map->nalloc_ctx, sizeof(ProcessHashMapEntry));
     if (!new_entry) return false;
 
     new_entry->key = pid;
@@ -79,7 +79,7 @@ bool process_hashmap_remove(ProcessHashMap* map, uint32_t pid) {
             } else {
                 map->buckets[index] = current->next;
             }
-            nalloc_free(map->nalloc_ctx, current);
+            nalloc_free(&map->nalloc_ctx, current);
             return true;
         }
         prev = current;
@@ -93,10 +93,10 @@ void process_hashmap_destroy(ProcessHashMap* map) {
         ProcessHashMapEntry* current = map->buckets[i];
         while (current) {
             ProcessHashMapEntry* next = current->next;
-            nalloc_free(map->nalloc_ctx, current);
+            nalloc_free(&map->nalloc_ctx, current);
             current = next;
         }
     }
-    nalloc_free(map->nalloc_ctx, map->buckets);
-    nalloc_free(map->nalloc_ctx, map);
+    nalloc_free(&map->nalloc_ctx, map->buckets);
+    nalloc_free(&map->nalloc_ctx, map);
 }
