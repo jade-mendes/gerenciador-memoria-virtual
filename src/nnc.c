@@ -778,19 +778,19 @@ void print_instructions(const size_t count, Instruction *instructions) {
 //         fprintf(stderr, "Uso: %s <arquivo_de_entrada> [<arquivo_de_saida>]\n", argv[0]);
 //         return 1;
 //     }
-//
+
 //     FILE* file = fopen(argv[1], "r");
 //     if (!file) {
 //         perror("Erro ao abrir arquivo");
 //         return 1;
 //     }
-//
+
 //     int count;
 //     Instruction* instructions = parse_instructions(file, &count);
 //     fclose(file);
-//
+
 //     print_instructions(count, instructions);
-//
+
 //     int output_file = open(argc > 2 ? argv[2] : "output.bin", O_RDWR | O_CREAT | O_TRUNC, 0644);
 //     if (output_file != -1) {
 //         write(output_file, instructions, count * sizeof(Instruction));
@@ -799,7 +799,7 @@ void print_instructions(const size_t count, Instruction *instructions) {
 //         perror("Erro ao abrir arquivo de saída");
 //     }
 //     free_instructions(instructions, count);
-//
+
 //     size_t n = instructions_amount(output_file);
 //     printf("Quantidade de instruções: %zu\n", n);
 //     Instruction buf[n];

@@ -4,7 +4,7 @@
 
 
 #include "Simulador.h"
-#include "Process.h"
+#include "process.h"
 
 #include <assert.h>
 #include <stdio.h>
