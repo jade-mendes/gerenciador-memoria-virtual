@@ -16,7 +16,12 @@
 // Definições de status de acesso à memória
 #define MEM_ACCESS_OK 0
 #define MEM_ACCESS_PAGE_NOT_ALLOCATED 1
+#define MEM_ACCESS_INVALID_ADDRESS 2
 #define INVALID_FRAME 0xFFFFFFFF
+
+#define ADDR_STATUS(addr) (addr == MEM_ACCESS_OK ? "OK" : \
+                          addr == MEM_ACCESS_PAGE_NOT_ALLOCATED ? "PAGE NOT ALLOCATED" : \
+                          addr == MEM_ACCESS_INVALID_ADDRESS ? "INVALID ADDRESS" : "UNKNOWN STATUS")
 
 // Estruturas da tabela de páginas
 typedef struct {
