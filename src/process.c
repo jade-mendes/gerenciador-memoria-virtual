@@ -41,6 +41,19 @@ Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruct
     return new_process;
 }
 
+void destroy_process(Process* process, const NallocContext* nalloc_ctx) {
+    if (!process) return;
+
+    // Libera a tabela de páginas
+    destroy_page_table(nalloc_ctx, process->page_table);
+
+    // Libera o hashmap de variáveis
+    hashmap_destroy(process->variables_adrr);
+
+    // Libera a memória do processo
+    nalloc_free(nalloc_ctx, process);
+}
+
 // Função para terminar um processo
 void terminar_processo(Simulador* sim, uint32_t pid) {
     Process* process = NULL;

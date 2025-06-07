@@ -80,6 +80,33 @@ Simulador create_simulator(const SimulationConfig config) {
     return sim;
 }
 
+void destroy_simulator(Simulador* sim) {
+    if (!sim) return;
+
+    // Destrói TLB
+    destroy_tlb(&sim->main_memory_ctx, sim->tlb);
+
+    // Destrói fila de processos
+    process_queue_destroy(sim->process_queue);
+
+    // Destroi processos na memória principal
+    PROCESS_HASHMAP_FOREACH(sim->process_map_main, entry) {
+        destroy_process(entry->value, &sim->main_memory_ctx);
+    }
+    // Destroi processos na memória secundária
+    PROCESS_HASHMAP_FOREACH(sim->process_map_secondary, entry) {
+        destroy_process(entry->value, &sim->secondary_memory_ctx);
+    }
+
+    // Destrói mapas de processos
+    process_hashmap_destroy(sim->process_map_main);
+    process_hashmap_destroy(sim->process_map_secondary);
+
+    // Libera contextos de alocação
+    free(sim->main_memory_ctx.base_addr);
+    free(sim->secondary_memory_ctx.base_addr);
+}
+
 // =========================
 
 // Funções de gerenciamento da TLB
@@ -421,8 +448,7 @@ int main() {
 
     nalloc_print_memory(&sim.main_memory_ctx);
     // Limpeza
-    destroy_page_table(&sim.main_memory_ctx, proc->page_table);
-    destroy_tlb(&sim.main_memory_ctx, sim.tlb);
+    destroy_simulator(&sim);
     nalloc_print_memory(&sim.main_memory_ctx);
 
     printf("\nTodos os testes passaram com sucesso!\n");

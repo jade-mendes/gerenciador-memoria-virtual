@@ -16,6 +16,7 @@
 // void inst_print_p(const char *var_name, const size_t pid);
 // void inst_print_s(const char *var_name, const size_t pid);
 // void inst_assign(const char *var1, const char *var2, const size_t pid);
+// void inst_assign_var_num(const char *var1, int num, const size_t pid);
 // void inst_assign_add_num(const char *var1, const char *var2, int num, const size_t pid);
 // void inst_assign_sub_num(const char *var1, const char *var2, int num, const size_t pid);
 // void inst_assign_add_var(const char *var1, const char *var2, const char *var3, const size_t pid);
@@ -58,6 +59,9 @@
 //             break;
 //         case INST_ASSIGN:
 //             inst_assign(inst->args.assign.var1, inst->args.assign.var2, pid);
+//             break;
+//         case INST_ASSIGN_VAR_NUM:
+//             inst_assign_var_num(inst->args.assign_var_num.var1, inst->args.assign_var_num.num, pid);
 //             break;
 //         case INST_ASSIGN_ADD_NUM:
 //             inst_assign_add_num(inst->args.assign_num.var1, inst->args.assign_num.var2, inst->args.assign_num.num, pid);

@@ -1,3 +1,7 @@
+
+
+
+
 // Exemplo de arquivo de entrada para o simulador de memória virtual
 // Criação de processos
 Create(main);      // Cria o processo principal
@@ -15,6 +19,11 @@ mem1 = mem2;       // mem1 aponta para mem2
 tmp = &tmp - 5;     // tmp = tmp - 5
 res = mem1 + mem2; // res = mem1 + mem2
 dif = mem2 - mem1; // dif = mem2 - mem1
+
+number = 389; // Atribui 389 a number
+char = 'A'; // Atribui 'A' a character
+string = "Hello, World!"; // Atribui string a string
+string2 = "Goodbye!"; // Atribui string2 a string2
 
 input_n(in1);  // Lê um número inteiro do usuário
 input_s(in2, 12);  // Lê uma string do usuário

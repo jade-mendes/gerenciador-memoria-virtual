@@ -41,6 +41,20 @@ bool process_hashmap_remove(ProcessHashMap* map, uint32_t pid);
 void process_hashmap_destroy(ProcessHashMap* map);
 
 
+// Macro para iteração simples (não segura para remoção durante a iteração)
+#define PROCESS_HASHMAP_FOREACH(map, entry_var) \
+    for (size_t _bucket_idx_ = 0; _bucket_idx_ < (map)->capacity; _bucket_idx_++) \
+        for (ProcessHashMapEntry* entry_var = (map)->buckets[_bucket_idx_]; \
+             entry_var != NULL; \
+             entry_var = entry_var->next)
 
+// Macro para iteração segura (permite remoção durante a iteração)
+#define PROCESS_HASHMAP_FOREACH_SAFE(map, entry_var, next_var) \
+    for (size_t _bucket_idx_ = 0; _bucket_idx_ < (map)->capacity; _bucket_idx_++) \
+        for (ProcessHashMapEntry *entry_var = (map)->buckets[_bucket_idx_], \
+                                 *next_var = (entry_var ? entry_var->next : NULL); \
+             entry_var != NULL; \
+             entry_var = next_var, \
+             next_var = (entry_var ? entry_var->next : NULL))
 
 #endif //PROCESSHASHMAP_H
