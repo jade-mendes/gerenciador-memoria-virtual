@@ -14,7 +14,7 @@ typedef struct nalloc_context {
 } NallocContext;
 
 // Inicializa um novo contexto de alocação
-void nalloc_init(void* buffer, const size_t size) {
+NallocContext nalloc_init(void* buffer, const size_t size) {
     NallocContext ctx;
     ctx.base_addr = buffer;
     ctx.total_size = size;
@@ -23,15 +23,16 @@ void nalloc_init(void* buffer, const size_t size) {
     BlockHeader* header = buffer;
     header->size = size - sizeof(BlockHeader);
     header->is_free = true;
+    return ctx;
 }
 
 // Aloca memória no contexto especificado
-void* nalloc_alloc(NallocContext* ctx, size_t size) {
+void* nalloc_alloc(const NallocContext* ctx, const size_t size) {
     void* current = ctx->base_addr;
     const void* end = (char*)ctx->base_addr + ctx->total_size;
 
     while (current < end) {
-        BlockHeader* header = (BlockHeader*)current;
+        BlockHeader* header = current;
 
         if (header->is_free && header->size >= size) {
             // Verifica se pode dividir o bloco
@@ -54,7 +55,7 @@ void* nalloc_alloc(NallocContext* ctx, size_t size) {
 }
 
 // Libera memória no contexto especificado
-void nalloc_free(NallocContext* ctx, void* ptr) {
+void nalloc_free(const NallocContext* ctx, void* ptr) {
     if (!ptr) return;
 
     BlockHeader* header = (BlockHeader*)((char*)ptr - sizeof(BlockHeader));
@@ -68,7 +69,7 @@ void nalloc_free(NallocContext* ctx, void* ptr) {
 }
 
 // Realoca memória no contexto especificado
-void* nalloc_realloc(NallocContext* ctx, void* ptr, size_t size) {
+void* nalloc_realloc(const NallocContext* ctx, void* ptr, size_t size) {
     if (!ptr) return nalloc_alloc(ctx, size);
 
     BlockHeader* header = (BlockHeader*)((char*)ptr - sizeof(BlockHeader));
@@ -130,7 +131,7 @@ void nalloc_print_memory(NallocContext* ctx) {
     double accumulated = 0.0;
 
     while (current < end && bar_index < bar_width) {
-        BlockHeader* header = (BlockHeader*)current;
+        BlockHeader* header = current;
         size_t block_size = sizeof(BlockHeader) + header->size;
         double block_units = block_size / unit_size;
 
@@ -155,6 +156,7 @@ void nalloc_print_memory(NallocContext* ctx) {
         visual[bar_index] = '?';
     }
 
+    printf("Memória inicia em %p vai até %p (%zu bytes)\n",ctx->base_addr, (char*)ctx->base_addr + ctx->total_size, ctx->total_size);
     // Imprime a barra colorida
     printf("[");
     for (int i = 0; i < bar_width; i++) {
@@ -173,75 +175,71 @@ void nalloc_print_memory(NallocContext* ctx) {
 }
 
 
-int main() {
-    const size_t BUFFER_SIZE = 1024; // 1KB para testes
-    char buffer[BUFFER_SIZE];
-
-    // 1. Inicialização do alocador
-    nalloc_init(buffer, BUFFER_SIZE);
-    NallocContext ctx = {
-        .base_addr = buffer,
-        .total_size = BUFFER_SIZE
-    };
-
-    printf("=== Estado Inicial ===\n");
-    nalloc_print_memory(&ctx);
-    printf("Memória total: %zu bytes\n", BUFFER_SIZE);
-    printf("Livre inicial: %zu bytes\n", nalloc_free_size(&ctx));
-    printf("Alocada inicial: %zu bytes\n\n", nalloc_allocated_size(&ctx));
-
-    // 2. Teste de alocação básica
-    char *ptr1 = nalloc_alloc(&ctx, 100);
-    char *ptr2 = nalloc_alloc(&ctx, 200);
-    printf("=== Após duas alocações ===\n");
-    nalloc_print_memory(&ctx);
-    printf("ptr1: %p [100 bytes]\n", (void*)ptr1);
-    printf("ptr2: %p [200 bytes]\n", (void*)ptr2);
-    printf("Livre: %zu bytes\n", nalloc_free_size(&ctx));
-    printf("Alocada: %zu bytes\n\n", nalloc_allocated_size(&ctx));
-
-    // 3. Teste de liberação e coalescência
-    nalloc_free(&ctx, ptr1);
-    printf("=== Após liberar ptr1 ===\n");
-    nalloc_print_memory(&ctx);
-    printf("Livre: %zu bytes (deve aumentar 100 + header)\n", nalloc_free_size(&ctx));
-    printf("Alocada: %zu bytes\n\n", nalloc_allocated_size(&ctx));
-
-    // 4. Teste de realocação (crescimento)
-    char *new_ptr2 = nalloc_realloc(&ctx, ptr2, 300);
-    printf("=== Após realocar ptr2 (200->300) ===\n");
-    nalloc_print_memory(&ctx);
-    printf("Original: %p\n", (void*)ptr2);
-    printf("Novo: %p %s\n", (void*)new_ptr2,
-          (ptr2 != new_ptr2) ? "(movido)" : "(mesmo local)");
-    printf("Livre: %zu bytes\n", nalloc_free_size(&ctx));
-    printf("Alocada: %zu bytes\n\n", nalloc_allocated_size(&ctx));
-
-    // 5. Teste de fragmentação
-    char *ptr3 = nalloc_alloc(&ctx, 150);
-    char *ptr4 = nalloc_alloc(&ctx, 100);
-    printf("=== Após alocar ptr3 e ptr4 ===\n");
-    nalloc_print_memory(&ctx);
-    printf("ptr3: %p [150 bytes]\n", (void*)ptr3);
-    printf("ptr4: %p [100 bytes]\n", (void*)ptr4);
-    printf("Livre: %zu bytes\n", nalloc_free_size(&ctx));
-    printf("Alocada: %zu bytes\n\n", nalloc_allocated_size(&ctx));
-
-    // 6. Teste de estouro de capacidade
-    char *ptr5 = nalloc_alloc(&ctx, 1000);
-    printf("=== Tentativa de alocação grande ===\n");
-    nalloc_print_memory(&ctx);
-    printf("ptr5: %p %s\n\n", (void*)ptr5,
-          ptr5 ? "(sucesso)" : "(falha esperada)");
-
-    // 7. Liberação total e verificação final
-    nalloc_free(&ctx, new_ptr2);
-    nalloc_free(&ctx, ptr3);
-    nalloc_free(&ctx, ptr4);
-    printf("=== Após liberar tudo ===\n");
-    nalloc_print_memory(&ctx);
-    printf("Livre: %zu bytes\n", nalloc_free_size(&ctx));
-    printf("Alocada: %zu bytes\n", nalloc_allocated_size(&ctx));
-
-    return 0;
-}
+// int main() {
+//     const size_t BUFFER_SIZE = 1024; // 1KB para testes
+//     char buffer[BUFFER_SIZE];
+//
+//     // 1. Inicialização do alocador
+//     NallocContext ctx = nalloc_init(buffer, BUFFER_SIZE);
+//
+//     printf("=== Estado Inicial ===\n");
+//     nalloc_print_memory(&ctx);
+//     printf("Memória total: %zu bytes\n", BUFFER_SIZE);
+//     printf("Livre inicial: %zu bytes\n", nalloc_free_size(&ctx));
+//     printf("Alocada inicial: %zu bytes\n\n", nalloc_allocated_size(&ctx));
+//
+//     // 2. Teste de alocação básica
+//     char *ptr1 = nalloc_alloc(&ctx, 100);
+//     char *ptr2 = nalloc_alloc(&ctx, 200);
+//     printf("=== Após duas alocações ===\n");
+//     nalloc_print_memory(&ctx);
+//     printf("ptr1: %p [100 bytes]\n", (void*)ptr1);
+//     printf("ptr2: %p [200 bytes]\n", (void*)ptr2);
+//     printf("Livre: %zu bytes\n", nalloc_free_size(&ctx));
+//     printf("Alocada: %zu bytes\n\n", nalloc_allocated_size(&ctx));
+//
+//     // 3. Teste de liberação e coalescência
+//     nalloc_free(&ctx, ptr1);
+//     printf("=== Após liberar ptr1 ===\n");
+//     nalloc_print_memory(&ctx);
+//     printf("Livre: %zu bytes (deve aumentar 100 + header)\n", nalloc_free_size(&ctx));
+//     printf("Alocada: %zu bytes\n\n", nalloc_allocated_size(&ctx));
+//
+//     // 4. Teste de realocação (crescimento)
+//     char *new_ptr2 = nalloc_realloc(&ctx, ptr2, 300);
+//     printf("=== Após realocar ptr2 (200->300) ===\n");
+//     nalloc_print_memory(&ctx);
+//     printf("Original: %p\n", (void*)ptr2);
+//     printf("Novo: %p %s\n", (void*)new_ptr2,
+//           (ptr2 != new_ptr2) ? "(movido)" : "(mesmo local)");
+//     printf("Livre: %zu bytes\n", nalloc_free_size(&ctx));
+//     printf("Alocada: %zu bytes\n\n", nalloc_allocated_size(&ctx));
+//
+//     // 5. Teste de fragmentação
+//     char *ptr3 = nalloc_alloc(&ctx, 150);
+//     char *ptr4 = nalloc_alloc(&ctx, 100);
+//     printf("=== Após alocar ptr3 e ptr4 ===\n");
+//     nalloc_print_memory(&ctx);
+//     printf("ptr3: %p [150 bytes]\n", (void*)ptr3);
+//     printf("ptr4: %p [100 bytes]\n", (void*)ptr4);
+//     printf("Livre: %zu bytes\n", nalloc_free_size(&ctx));
+//     printf("Alocada: %zu bytes\n\n", nalloc_allocated_size(&ctx));
+//
+//     // 6. Teste de estouro de capacidade
+//     char *ptr5 = nalloc_alloc(&ctx, 1000);
+//     printf("=== Tentativa de alocação grande ===\n");
+//     nalloc_print_memory(&ctx);
+//     printf("ptr5: %p %s\n\n", (void*)ptr5,
+//           ptr5 ? "(sucesso)" : "(falha esperada)");
+//
+//     // 7. Liberação total e verificação final
+//     nalloc_free(&ctx, new_ptr2);
+//     nalloc_free(&ctx, ptr3);
+//     nalloc_free(&ctx, ptr4);
+//     printf("=== Após liberar tudo ===\n");
+//     nalloc_print_memory(&ctx);
+//     printf("Livre: %zu bytes\n", nalloc_free_size(&ctx));
+//     printf("Alocada: %zu bytes\n", nalloc_allocated_size(&ctx));
+//
+//     return 0;
+// }
