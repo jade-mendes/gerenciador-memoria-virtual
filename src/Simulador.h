@@ -17,11 +17,13 @@
 #define MEM_ACCESS_OK 0
 #define MEM_ACCESS_PAGE_NOT_ALLOCATED 1
 #define MEM_ACCESS_INVALID_ADDRESS 2
+#define VAR_NOT_FOUND 3
 #define INVALID_FRAME 0xFFFFFFFF
 
 #define ADDR_STATUS(addr) (addr == MEM_ACCESS_OK ? "OK" : \
                           addr == MEM_ACCESS_PAGE_NOT_ALLOCATED ? "PAGE NOT ALLOCATED" : \
-                          addr == MEM_ACCESS_INVALID_ADDRESS ? "INVALID ADDRESS" : "UNKNOWN STATUS")
+                          addr == MEM_ACCESS_INVALID_ADDRESS ? "INVALID ADDRESS" : \
+                          addr == VAR_NOT_FOUND ? "VAR NOT FOUND" : "UNKNOWN ERROR")
 
 // Estruturas da tabela de páginas
 typedef struct {
@@ -61,8 +63,8 @@ typedef struct {
     uint32_t MS_SIZE;
     uint32_t TLB_SIZE;
     uint32_t TIME_SLICE;
-    SubPolicyType BITS_LOGICAL_ADDRESS;
-    uint32_t SUB_POLICY_TYPE;
+    uint32_t BITS_LOGICAL_ADDRESS;
+    SubPolicyType SUB_POLICY_TYPE;
     char FILE_NAME[100];
 } SimulationConfig;
 
@@ -80,6 +82,8 @@ typedef struct Simulador {
 
     TLB* tlb;
 } Simulador;
+
+extern Simulador* simulador;
 
 // Funções do simulador
 Simulador create_simulator(const SimulationConfig config);
@@ -109,6 +113,8 @@ void destroy_tlb(const NallocContext* ctx, TLB* tlb);
 
 // Função para destruir páginas de um processo
 void destroy_process_pages(Simulador* s, Process* p);
+
+Process* get_process_by_pid(Simulador* simulador, uint32_t pid);
 
 
 

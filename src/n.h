@@ -6,6 +6,8 @@
 #define N_H
 
 #define MAX_NAME_LEN 8 // 7 caracteres + \0
+#include <stddef.h>
+#include <stdint.h>
 
 // Enumeração dos tipos de instrução
 typedef enum {

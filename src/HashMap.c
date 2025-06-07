@@ -2,30 +2,23 @@
 // Created by Nathan Pinheiro on 03/06/2025.
 //
 
+#include "HashMap.h"
+
+#include <stdint.h>
+#include <stdio.h>
+
 #include "nalloc.h"
 #include <string.h>
 
 #define KEY_SIZE 8
 
-// Estrutura de uma entrada no hashmap
-typedef struct HashMapEntry {
-    char key[KEY_SIZE];
-    int value;
-    struct HashMapEntry* next;
-} HashMapEntry;
-
-// Estrutura principal do hashmap
-typedef struct {
-    NallocContext* nalloc_ctx; // Contexto de alocação
-    size_t capacity;            // Capacidade total do hashmap
-    HashMapEntry** buckets;     // Array de baldes (buckets)
-} HashMap;
-
-// Função de hash simples para chaves de 8 bytes
-static size_t hash_func(const char key[KEY_SIZE], size_t capacity) {
-    size_t hash = 0;
-    for (int i = 0; i < KEY_SIZE; i++) {
-        hash = (hash << 5) + key[i];
+// Função de hash melhorada para chaves de 8 bytes
+static size_t hash_func(const char* key, const size_t capacity) {
+    const size_t len = strlen(key);
+    uint32_t hash = 0;
+    // Processa até KEY_SIZE bytes ou até '\0'
+    for (int i = 0; i < len; i++) {
+        hash += key[i];
     }
     return hash % capacity;
 }
@@ -52,14 +45,19 @@ HashMap* hashmap_create(NallocContext* ctx, size_t capacity) {
 }
 
 // Insere ou atualiza um valor no hashmap
-bool hashmap_put(HashMap* map, const char key[KEY_SIZE], int value) {
+bool hashmap_put(HashMap* map, const char* key, int value) {
+    //printf("\n ================ hashmap_put: key = %.8s, value = %d, \n", key, value);
+
+
     size_t index = hash_func(key, map->capacity);
+    //printf("capacity = %zu, index = %zu ===============\n", map->capacity, index);
+
     HashMapEntry* current = map->buckets[index];
 
-    // Verifica se a chave já existe
+    // Verificação de chave existente
     while (current) {
-        if (memcmp(current->key, key, KEY_SIZE) == 0) {
-            current->value = value; // Atualiza o valor
+        if (strncmp(current->key, key, KEY_SIZE) == 0) {
+            current->value = value;
             return true;
         }
         current = current->next;
@@ -69,20 +67,21 @@ bool hashmap_put(HashMap* map, const char key[KEY_SIZE], int value) {
     HashMapEntry* new_entry = nalloc_alloc(map->nalloc_ctx, sizeof(HashMapEntry));
     if (!new_entry) return false;
 
-    memcpy(new_entry->key, key, KEY_SIZE);
+    memcpy(new_entry->key, key, KEY_SIZE); // Copia dados do ponteiro
     new_entry->value = value;
-    new_entry->next = map->buckets[index]; // Insere no início
+    new_entry->next = map->buckets[index];
     map->buckets[index] = new_entry;
     return true;
 }
 
+
 // Obtém um valor do hashmap
-bool hashmap_get(HashMap* map, const char key[KEY_SIZE], int* out_value) {
+bool hashmap_get(HashMap* map, const char* key, int* out_value) {
     size_t index = hash_func(key, map->capacity);
     HashMapEntry* current = map->buckets[index];
 
     while (current) {
-        if (memcmp(current->key, key, KEY_SIZE) == 0) {
+        if (strncmp(current->key, key, KEY_SIZE) == 0) {
             *out_value = current->value;
             return true;
         }
@@ -92,13 +91,13 @@ bool hashmap_get(HashMap* map, const char key[KEY_SIZE], int* out_value) {
 }
 
 // Remove uma entrada do hashmap
-bool hashmap_remove(HashMap* map, const char key[KEY_SIZE]) {
+bool hashmap_remove(HashMap* map, const char* key) {
     size_t index = hash_func(key, map->capacity);
     HashMapEntry* current = map->buckets[index];
     HashMapEntry* prev = NULL;
 
     while (current) {
-        if (memcmp(current->key, key, KEY_SIZE) == 0) {
+        if (strncmp(current->key, key, KEY_SIZE) == 0) {
             if (prev) {
                 prev->next = current->next;
             } else {
@@ -125,4 +124,18 @@ void hashmap_destroy(HashMap* map) {
     }
     nalloc_free(map->nalloc_ctx, map->buckets);
     nalloc_free(map->nalloc_ctx, map);
+}
+
+void print_hashmap(const HashMap* map) {
+    for (size_t i = 0; i < map->capacity; i++) {
+        HashMapEntry* current = map->buckets[i];
+        if (current) {
+            printf("Bucket %zu: ", i);
+            while (current) {
+                printf("{key: %.8s, value: %d} -> ", current->key, current->value);
+                current = current->next;
+            }
+            printf("NULL\n");
+        }
+    }
 }
