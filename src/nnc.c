@@ -82,9 +82,11 @@ uintptr_t hex_to_uintptr(const char* hex_str) {
 }
 
 // Função principal do parser
-Instruction* parse_instructions(FILE* file, int* count) {
+Instruction* parse_instructions(FILE* file, int* count_insts, char** texts_out, int* text_size) {
     Instruction* instructions = NULL;
-    *count = 0;
+    *texts_out = NULL;
+    *text_size = 0;
+    *count_insts = 0;
     int capacity = 0;
     char line[256];
 
@@ -101,23 +103,23 @@ Instruction* parse_instructions(FILE* file, int* count) {
             *end = '\0';
             char* name = trim(start);
 
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
-            instructions[*count] = (Instruction){
+            instructions[*count_insts] = (Instruction){
                 .type = INST_CREATE
             };
-            safe_strcpy(instructions[*count].args.create.process_name, name);
-            (*count)++;
+            safe_strcpy(instructions[*count_insts].args.create.process_name, name);
+            (*count_insts)++;
         }
         else if (strcmp(trimmed, "Terminate();") == 0) {
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
-            instructions[*count] = (Instruction){.type = INST_TERMINATE};
-            (*count)++;
+            instructions[*count_insts] = (Instruction){.type = INST_TERMINATE};
+            (*count_insts)++;
         }
         else if (strstr(trimmed, "= mmap(")) {
             char* var_end = strstr(trimmed, "=");
@@ -138,17 +140,17 @@ Instruction* parse_instructions(FILE* file, int* count) {
             int size = atoi(trim(size_str));
             add_like = trim(add_like);
 
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
-            instructions[*count] = (Instruction){
+            instructions[*count_insts] = (Instruction){
                 .type = INST_MMAP,
                 .args.mmap.size = size,
                 .args.mmap.add_like = hex_to_uintptr(add_like)
             };
-            safe_strcpy(instructions[*count].args.mmap.var_name, var_name);
-            (*count)++;
+            safe_strcpy(instructions[*count_insts].args.mmap.var_name, var_name);
+            (*count_insts)++;
         }
         else if (strncmp(trimmed, "print_", 6) == 0) {
             char type = trimmed[6];
@@ -166,15 +168,15 @@ Instruction* parse_instructions(FILE* file, int* count) {
             else if (type == 's') inst_type = INST_PRINT_S;
             else continue;
 
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
-            instructions[*count] = (Instruction){
+            instructions[*count_insts] = (Instruction){
                 .type = inst_type
             };
-            safe_strcpy(instructions[*count].args.print.var_name, var_name);
-            (*count)++;
+            safe_strcpy(instructions[*count_insts].args.print.var_name, var_name);
+            (*count_insts)++;
         }
         else if (strstr(trimmed, "=") && !strstr(trimmed, "jump_eq")) {
             char* eq_pos = strchr(trimmed, '=');
@@ -205,7 +207,7 @@ Instruction* parse_instructions(FILE* file, int* count) {
                     }
                 }
 
-                if (*count >= capacity) {
+                if (*count_insts >= capacity) {
                     capacity = capacity ? capacity * 2 : 16;
                     instructions = realloc(instructions, capacity * sizeof(Instruction));
                 }
@@ -213,46 +215,104 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 if (is_num) {
                     int num = atoi(operand_str);
                     if (op == '+') {
-                        instructions[*count] = (Instruction){
+                        instructions[*count_insts] = (Instruction){
                             .type = INST_ASSIGN_ADD_NUM,
                             .args.assign_num.num = num
                         };
                     } else {
-                        instructions[*count] = (Instruction){
+                        instructions[*count_insts] = (Instruction){
                             .type = INST_ASSIGN_SUB_NUM,
                             .args.assign_num.num = num
                         };
                     }
-                    safe_strcpy(instructions[*count].args.assign_num.var1, var1);
-                    safe_strcpy(instructions[*count].args.assign_num.var2, var2);
-                    (*count)++;
+                    safe_strcpy(instructions[*count_insts].args.assign_num.var1, var1);
+                    safe_strcpy(instructions[*count_insts].args.assign_num.var2, var2);
+                    (*count_insts)++;
                 } else {
                     if (op == '+') {
-                        instructions[*count] = (Instruction){
+                        instructions[*count_insts] = (Instruction){
                             .type = INST_ASSIGN_ADD_VAR
                         };
                     } else {
-                        instructions[*count] = (Instruction){
+                        instructions[*count_insts] = (Instruction){
                             .type = INST_ASSIGN_SUB_VAR
                         };
                     }
-                    safe_strcpy(instructions[*count].args.assign_var.var1, var1);
-                    safe_strcpy(instructions[*count].args.assign_var.var2, var2);
-                    safe_strcpy(instructions[*count].args.assign_var.var3, operand_str);
-                    (*count)++;
+                    safe_strcpy(instructions[*count_insts].args.assign_var.var1, var1);
+                    safe_strcpy(instructions[*count_insts].args.assign_var.var2, var2);
+                    safe_strcpy(instructions[*count_insts].args.assign_var.var3, operand_str);
+                    (*count_insts)++;
                 }
             } else {
                 // Atribuição simples
-                if (*count >= capacity) {
+                if (*count_insts >= capacity) {
                     capacity = capacity ? capacity * 2 : 16;
                     instructions = realloc(instructions, capacity * sizeof(Instruction));
                 }
-                instructions[*count] = (Instruction){
-                    .type = INST_ASSIGN
-                };
-                safe_strcpy(instructions[*count].args.assign.var1, var1);
-                safe_strcpy(instructions[*count].args.assign.var2, expr);
-                (*count)++;
+
+                bool is_num = true;
+                for (char* p = expr; *p; p++) {
+                    if (!isdigit((unsigned char)*p) && *p != '-' && *p != '+') {
+                        is_num = false;
+                        break;
+                    }
+                }
+
+                if (is_num) {
+                    instructions[*count_insts] = (Instruction){
+                        .type = INST_ASSIGN_VAR_NUM,
+                        .args.assign_var_num.num = atoi(expr)
+                    };
+                    safe_strcpy(instructions[*count_insts].args.assign_var_num.var1, var1);
+                    (*count_insts)++;
+                }
+                else {
+                    // var = 'c';
+                    if (expr[0] == '\'' && expr[strlen(expr)-1] == '\'') {
+                        expr[strlen(expr)-1] = '\0';
+                        expr++;
+
+                        instructions[*count_insts] = (Instruction) {
+                            .type = INST_ASSIGN_VAR_NUM,
+                            .args.assign_var_num.num = (int)expr[0]  // Valor ASCII do caractere
+                        };
+                        safe_strcpy(instructions[*count_insts].args.assign_var_num.var1, var1);
+                        (*count_insts)++;  // IMPORTANTE: incrementar o contador
+                    }
+                    // var = "string";
+                    else if (expr[0] == '"' && expr[strlen(expr)-1] == '"') {
+                        expr[strlen(expr)-1] = '\0';
+                        expr++;
+
+                        int str_len = strlen(expr);
+                        if (*texts_out) {
+                            *texts_out = realloc(*texts_out, (*text_size) + str_len + 1);
+                        } else {
+                            *texts_out = malloc(str_len + 1);
+                        }
+
+                        // Copiar string para o buffer de textos
+                        strcpy(*texts_out + *text_size, expr);
+
+                        instructions[*count_insts] = (Instruction) {
+                            .type = INST_ASSIGN_VAR_NUM,  // Armazena o offset como número
+                            .args.assign_var_num.num = *text_size
+                        };
+                        safe_strcpy(instructions[*count_insts].args.assign_var_num.var1, var1);
+                        (*count_insts)++;  // IMPORTANTE: incrementar o contador
+
+                        *text_size += str_len + 1;  // +1 para o terminador nulo
+                    }
+                    // var1 = var2;
+                    else {
+                        instructions[*count_insts] = (Instruction) {
+                            .type = INST_ASSIGN
+                        };
+                        safe_strcpy(instructions[*count_insts].args.assign.var1, var1);
+                        safe_strcpy(instructions[*count_insts].args.assign.var2, expr);
+                        (*count_insts)++;
+                    }
+                }
             }
         }
         else if (strncmp(trimmed, "label(", 6) == 0) {
@@ -261,7 +321,7 @@ Instruction* parse_instructions(FILE* file, int* count) {
             if (!end) continue;
             *end = '\0';
             char* name = trim(start);
-            add_label(name, *count);
+            add_label(name, *count_insts);
         }
         else if (strncmp(trimmed, "jump(", 5) == 0) {
             char* start = trimmed + 5;
@@ -270,16 +330,16 @@ Instruction* parse_instructions(FILE* file, int* count) {
             *end = '\0';
             char* target = trim(start);
 
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
-            instructions[*count] = (Instruction){
+            instructions[*count_insts] = (Instruction){
                 .type = INST_JUMP,
                 .args.jump.index = -1
             };
-            safe_strcpy(instructions[*count].args.jump.label, target);
-            (*count)++;
+            safe_strcpy(instructions[*count_insts].args.jump.label, target);
+            (*count_insts)++;
         }
         else if (strncmp(trimmed, "jump_eq(", 8) == 0) {
             char* start = trimmed + 8;
@@ -305,34 +365,34 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 }
             }
 
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
 
             if (is_num) {
                 int num = atoi(operand);
-                instructions[*count] = (Instruction){
+                instructions[*count_insts] = (Instruction){
                     .type = INST_JUMP_EQ_VAR_NUM,
                     .args.jump_eq_varnum = {
                         .target = {.index = -1},
                         .num = num
                     }
                 };
-                safe_strcpy(instructions[*count].args.jump_eq_varnum.target.label, target);
-                safe_strcpy(instructions[*count].args.jump_eq_varnum.var, var);
+                safe_strcpy(instructions[*count_insts].args.jump_eq_varnum.target.label, target);
+                safe_strcpy(instructions[*count_insts].args.jump_eq_varnum.var, var);
             } else {
-                instructions[*count] = (Instruction){
+                instructions[*count_insts] = (Instruction){
                     .type = INST_JUMP_EQ_VAR_VAR,
                     .args.jump_eq_varvar = {
                         .target = {.index = -1}
                     }
                 };
-                safe_strcpy(instructions[*count].args.jump_eq_varvar.target.label, target);
-                safe_strcpy(instructions[*count].args.jump_eq_varvar.var1, var);
-                safe_strcpy(instructions[*count].args.jump_eq_varvar.var2, operand);
+                safe_strcpy(instructions[*count_insts].args.jump_eq_varvar.target.label, target);
+                safe_strcpy(instructions[*count_insts].args.jump_eq_varvar.var1, var);
+                safe_strcpy(instructions[*count_insts].args.jump_eq_varvar.var2, operand);
             }
-            (*count)++;
+            (*count_insts)++;
         }
         else if (strncmp(trimmed, "jump_neq(", 9) == 0) {
             char* start = trimmed + 9;
@@ -358,34 +418,34 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 }
             }
 
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
 
             if (is_num) {
                 int num = atoi(operand);
-                instructions[*count] = (Instruction){
+                instructions[*count_insts] = (Instruction){
                     .type = INST_JUMP_N_EQ_VAR_NUM,
                     .args.jump_neq_varnum = {
                         .target = {.index = -1},
                         .num = num
                     }
                 };
-                safe_strcpy(instructions[*count].args.jump_neq_varnum.target.label, target);
-                safe_strcpy(instructions[*count].args.jump_neq_varnum.var, var);
+                safe_strcpy(instructions[*count_insts].args.jump_neq_varnum.target.label, target);
+                safe_strcpy(instructions[*count_insts].args.jump_neq_varnum.var, var);
             } else {
-                instructions[*count] = (Instruction){
+                instructions[*count_insts] = (Instruction){
                     .type = INST_JUMP_N_EQ_VAR_VAR,
                     .args.jump_neq_varvar = {
                         .target = {.index = -1}
                     }
                 };
-                safe_strcpy(instructions[*count].args.jump_neq_varvar.target.label, target);
-                safe_strcpy(instructions[*count].args.jump_neq_varvar.var1, var);
-                safe_strcpy(instructions[*count].args.jump_neq_varvar.var2, operand);
+                safe_strcpy(instructions[*count_insts].args.jump_neq_varvar.target.label, target);
+                safe_strcpy(instructions[*count_insts].args.jump_neq_varvar.var1, var);
+                safe_strcpy(instructions[*count_insts].args.jump_neq_varvar.var2, operand);
             }
-            (*count)++;
+            (*count_insts)++;
         }
         else if (strncmp(trimmed, "jump_lt(", 8) == 0) {
             char* start = trimmed + 8;
@@ -411,34 +471,34 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 }
             }
 
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
 
             if (is_num) {
                 int num = atoi(operand);
-                instructions[*count] = (Instruction){
+                instructions[*count_insts] = (Instruction){
                     .type = INST_JUMP_LT_VAR_NUM,
                     .args.jump_lt_varnum = {
                         .target = {.index = -1},
                         .num = num
                     }
                 };
-                safe_strcpy(instructions[*count].args.jump_lt_varnum.target.label, target);
-                safe_strcpy(instructions[*count].args.jump_lt_varnum.var, var);
+                safe_strcpy(instructions[*count_insts].args.jump_lt_varnum.target.label, target);
+                safe_strcpy(instructions[*count_insts].args.jump_lt_varnum.var, var);
             } else {
-                instructions[*count] = (Instruction){
+                instructions[*count_insts] = (Instruction){
                     .type = INST_JUMP_LT_VAR_VAR,
                     .args.jump_lt_varvar = {
                         .target = {.index = -1}
                     }
                 };
-                safe_strcpy(instructions[*count].args.jump_lt_varvar.target.label, target);
-                safe_strcpy(instructions[*count].args.jump_lt_varvar.var1, var);
-                safe_strcpy(instructions[*count].args.jump_lt_varvar.var2, operand);
+                safe_strcpy(instructions[*count_insts].args.jump_lt_varvar.target.label, target);
+                safe_strcpy(instructions[*count_insts].args.jump_lt_varvar.var1, var);
+                safe_strcpy(instructions[*count_insts].args.jump_lt_varvar.var2, operand);
             }
-            (*count)++;
+            (*count_insts)++;
         }
         else if (strncmp(trimmed, "jump_gt(", 8) == 0) {
             char* start = trimmed + 8;
@@ -464,34 +524,34 @@ Instruction* parse_instructions(FILE* file, int* count) {
                 }
             }
 
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
 
             if (is_num) {
                 int num = atoi(operand);
-                instructions[*count] = (Instruction){
+                instructions[*count_insts] = (Instruction){
                     .type = INST_JUMP_GT_VAR_NUM,
                     .args.jump_gt_varnum = {
                         .target = {.index = -1},
                         .num = num
                     }
                 };
-                safe_strcpy(instructions[*count].args.jump_gt_varnum.target.label, target);
-                safe_strcpy(instructions[*count].args.jump_gt_varnum.var, var);
+                safe_strcpy(instructions[*count_insts].args.jump_gt_varnum.target.label, target);
+                safe_strcpy(instructions[*count_insts].args.jump_gt_varnum.var, var);
             } else {
-                instructions[*count] = (Instruction){
+                instructions[*count_insts] = (Instruction){
                     .type = INST_JUMP_GT_VAR_VAR,
                     .args.jump_gt_varvar = {
                         .target = {.index = -1}
                     }
                 };
-                safe_strcpy(instructions[*count].args.jump_gt_varvar.target.label, target);
-                safe_strcpy(instructions[*count].args.jump_gt_varvar.var1, var);
-                safe_strcpy(instructions[*count].args.jump_gt_varvar.var2, operand);
+                safe_strcpy(instructions[*count_insts].args.jump_gt_varvar.target.label, target);
+                safe_strcpy(instructions[*count_insts].args.jump_gt_varvar.var1, var);
+                safe_strcpy(instructions[*count_insts].args.jump_gt_varvar.var2, operand);
             }
-            (*count)++;
+            (*count_insts)++;
         }
         else if (strncmp(trimmed, "input_n(", 8) == 0) {
             char* start = trimmed + 8;
@@ -500,15 +560,15 @@ Instruction* parse_instructions(FILE* file, int* count) {
             *end = '\0';
             char* var_name = trim(start);
 
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
-            instructions[*count] = (Instruction){
+            instructions[*count_insts] = (Instruction){
                 .type = INST_INPUT_N
             };
-            safe_strcpy(instructions[*count].args.input_n.var_name, var_name);
-            (*count)++;
+            safe_strcpy(instructions[*count_insts].args.input_n.var_name, var_name);
+            (*count_insts)++;
         }
         else if (strncmp(trimmed, "input_s(", 8) == 0) {
             char* start = trimmed + 8;
@@ -523,16 +583,16 @@ Instruction* parse_instructions(FILE* file, int* count) {
             int size = atoi(trim(size_str));
             var_name = trim(var_name);
 
-            if (*count >= capacity) {
+            if (*count_insts >= capacity) {
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
-            instructions[*count] = (Instruction){
+            instructions[*count_insts] = (Instruction){
                 .type = INST_INPUT_S,
                 .args.input_s.size = size
             };
-            safe_strcpy(instructions[*count].args.input_s.var_name, var_name);
-            (*count)++;
+            safe_strcpy(instructions[*count_insts].args.input_s.var_name, var_name);
+            (*count_insts)++;
         }
         else {
             fprintf(stderr, "Instrução desconhecida: %s\n", trimmed);
@@ -541,7 +601,7 @@ Instruction* parse_instructions(FILE* file, int* count) {
     }
 
     // Resolver labels
-    for (int i = 0; i < *count; i++) {
+    for (int i = 0; i < *count_insts; i++) {
         Instruction* inst = &instructions[i];
         switch (inst->type) {
             case INST_JUMP: {
@@ -630,27 +690,20 @@ void free_instructions(Instruction* insts, int count) {
     free_label_table();
 }
 
-/// Function to get the amount of instructions from the compiled binary.
-size_t instructions_amount(const int fd) {
-    const size_t file_size = lseek(fd, 0, SEEK_END);
-    if (file_size == (size_t)-1) {
-        perror("Erro ao obter tamanho do arquivo");
-        return 0;
-    }
-    lseek(fd, 0, SEEK_SET); // Volta para o início do arquivo
-    return file_size / sizeof(Instruction); // Retorna a quantidade de instruções
-}
-
 /// function to get the instructions from the compiled binary.
-void get_instructions(const int fd, Instruction* buffer) {
-    const ssize_t bytes_read = read(fd, buffer, sizeof(Instruction) * instructions_amount(fd));
-    if (bytes_read == -1) {
-        perror("Erro ao ler arquivo");
-        return;
-    }
-    if (bytes_read % sizeof(Instruction) != 0) {
-        fprintf(stderr, "Tamanho do arquivo inválido\n");
-    }
+void get_instructions(char* file_name, Instruction **instructions, size_t *count, char **texts_out, int *text_size) {
+    const int fd = open(file_name, O_RDONLY);
+
+    read(fd, text_size, sizeof(int));
+    *texts_out = malloc(*text_size);
+    read(fd, *texts_out, *text_size);
+
+    size_t file_size = lseek(fd, 0, SEEK_END);
+    lseek(fd, sizeof(int) + *text_size, SEEK_SET);
+    *count = (file_size - sizeof(int) - *text_size) / sizeof(Instruction);
+
+    *instructions = malloc(*count * sizeof(Instruction));
+    read(fd, *instructions, *count * sizeof(Instruction));
 }
 
 void print_instructions(const size_t count, Instruction *instructions) {
@@ -682,6 +735,11 @@ void print_instructions(const size_t count, Instruction *instructions) {
                 printf("ASSIGN(%s = %s)\n",
                        instructions[i].args.assign.var1,
                        instructions[i].args.assign.var2);
+                break;
+            case INST_ASSIGN_VAR_NUM:
+                printf("ASSIGN_VAR_NUM(%s = %d)\n",
+                       instructions[i].args.assign_var_num.var1,
+                       instructions[i].args.assign_var_num.num);
                 break;
             case INST_ASSIGN_ADD_NUM:
                 printf("ADD_NUM(%s = %s + %d)\n",
@@ -773,38 +831,61 @@ void print_instructions(const size_t count, Instruction *instructions) {
     }
 }
 
-// int main(int argc, char* argv[]) {
-//     if (argc < 2) {
-//         fprintf(stderr, "Uso: %s <arquivo_de_entrada> [<arquivo_de_saida>]\n", argv[0]);
-//         return 1;
-//     }
+int main(int argc, char* argv[]) {
+    if (argc < 2) {
+        fprintf(stderr, "Uso: %s <arquivo_de_entrada> [<arquivo_de_saida>]\n", argv[0]);
+        return 1;
+    }
 
-//     FILE* file = fopen(argv[1], "r");
-//     if (!file) {
-//         perror("Erro ao abrir arquivo");
-//         return 1;
-//     }
+    FILE* file = fopen(argv[1], "r");
+    if (!file) {
+        perror("Erro ao abrir arquivo");
+        return 1;
+    }
 
-//     int count;
-//     Instruction* instructions = parse_instructions(file, &count);
-//     fclose(file);
+    int count;
+    char* texts_out;
+    int text_size = 0;
+    Instruction* instructions = parse_instructions(file, &count, &texts_out, &text_size);
+    fclose(file);
 
-//     print_instructions(count, instructions);
+    print_instructions(count, instructions);
 
-//     int output_file = open(argc > 2 ? argv[2] : "output.bin", O_RDWR | O_CREAT | O_TRUNC, 0644);
-//     if (output_file != -1) {
-//         write(output_file, instructions, count * sizeof(Instruction));
-//     }
-//     else {
-//         perror("Erro ao abrir arquivo de saída");
-//     }
-//     free_instructions(instructions, count);
+    char* output_file_name = argc > 2 ? argv[2] : "output.bin";
+    int output_file = open(output_file_name, O_RDWR | O_CREAT | O_TRUNC, 0644);
+    if (output_file != -1) {
+        write(output_file, &text_size, sizeof(int));
+        write(output_file, texts_out, text_size);
+        write(output_file, instructions, count * sizeof(Instruction));
+    }
+    else {
+        perror("Erro ao abrir arquivo de saída");
+    }
+    free_instructions(instructions, count);
+    close(output_file);
 
-//     size_t n = instructions_amount(output_file);
-//     printf("Quantidade de instruções: %zu\n", n);
-//     Instruction buf[n];
-//     get_instructions(output_file, buf);
-//     Instruction* read_instructions = buf;
-//     print_instructions(n, read_instructions);
-//     return 0;
-// }
+
+    printf("Tentando ler arquivo compilado\n");
+    Instruction* read_instructions;
+    size_t read_count;
+    char* read_texts_out;
+    int read_text_size;
+    get_instructions(output_file_name, &read_instructions, &read_count, &read_texts_out, &read_text_size);
+
+    printf("Texts:\n\t0: ");
+    for (int i = 0; i < read_text_size; i++) {
+        if (read_texts_out[i] == '\0') {
+            printf("\n\t%d: ", i + 1);
+        } else if (read_texts_out[i] == '\n') {
+            printf("\\n");
+        } else if (read_texts_out[i] == '\t') {
+            printf("\\t");
+        } else {
+            printf("%c", read_texts_out[i]);
+        }
+    }
+    printf("\nInstruções lidas:\n");
+    print_instructions(read_count, read_instructions);
+
+    return 0;
+}

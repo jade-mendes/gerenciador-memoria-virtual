@@ -80,6 +80,33 @@ Simulador create_simulator(const SimulationConfig config) {
     return sim;
 }
 
+void destroy_simulator(Simulador* sim) {
+    if (!sim) return;
+
+    // Destrói TLB
+    destroy_tlb(&sim->main_memory_ctx, sim->tlb);
+
+    // Destrói fila de processos
+    process_queue_destroy(sim->process_queue);
+
+    // Destroi processos na memória principal
+    PROCESS_HASHMAP_FOREACH(sim->process_map_main, entry) {
+        destroy_process(entry->value, &sim->main_memory_ctx);
+    }
+    // Destroi processos na memória secundária
+    PROCESS_HASHMAP_FOREACH(sim->process_map_secondary, entry) {
+        destroy_process(entry->value, &sim->secondary_memory_ctx);
+    }
+
+    // Destrói mapas de processos
+    process_hashmap_destroy(sim->process_map_main);
+    process_hashmap_destroy(sim->process_map_secondary);
+
+    // Libera contextos de alocação
+    free(sim->main_memory_ctx.base_addr);
+    free(sim->secondary_memory_ctx.base_addr);
+}
+
 // =========================
 
 // Funções de gerenciamento da TLB
@@ -97,12 +124,10 @@ bool tlb_lookup(TLB* tlb, const uint32_t page, uintptr_t* frame) {
 void tlb_update(TLB* tlb, const uint32_t page, const uintptr_t frame) {
     uint32_t lru_index = 0;
     uint64_t min_used = UINT64_MAX;
-    bool found_invalid = false;
 
     for (uint32_t i = 0; i < tlb->size; i++) {
         if (!tlb->entries[i].valid) {
             lru_index = i;
-            found_invalid = true;
             break;
         }
         if (tlb->entries[i].last_used < min_used) {
@@ -134,6 +159,13 @@ void reset_tlb_validity(const TLB* tlb) {
 
 // Funções de acesso à memória
 uint8_t get_mem(const Simulador* s, Process* p, const uint32_t virt_addr, int* out_status) {
+    // Verificar se o endereço excede o espaço lógico
+    const uint32_t max_virt_addr = (1U << s->config.BITS_LOGICAL_ADDRESS) - 1;
+    if (virt_addr > max_virt_addr) {
+        *out_status = MEM_ACCESS_INVALID_ADDRESS;
+        return 0;
+    }
+
     uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
     const uint32_t offset = virt_addr % s->config.PAGE_SIZE;
 
@@ -164,6 +196,12 @@ uint8_t get_mem(const Simulador* s, Process* p, const uint32_t virt_addr, int* o
 }
 
 void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uint8_t value, int* out_status) {
+    // Verificar se o endereço excede o espaço lógico
+    const uint32_t max_virt_addr = (1U << s->config.BITS_LOGICAL_ADDRESS) - 1;
+    if (virt_addr > max_virt_addr) {
+        *out_status = MEM_ACCESS_INVALID_ADDRESS;
+        return;
+    }
     uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
     uint32_t offset = virt_addr % s->config.PAGE_SIZE;
 
@@ -194,7 +232,10 @@ void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uin
     *out_status = MEM_ACCESS_OK;
 }
 
-// Funções de gerenciamento de páginas
+// Funções de gerenciamento de páginas ==============
+
+// Aloca uma página virtual para o processo
+// Pode ser chamada apenas por processos na memória principal
 bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
     uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
 
@@ -239,6 +280,8 @@ bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
     return true;
 }
 
+// Libera uma página virtual do processo
+// Pode ser chamada apenas por processos na memória principal
 void deallocate_page(Simulador* s, Process* p, uint32_t virt_addr) {
     uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
 
@@ -312,7 +355,7 @@ int main() {
     printf("Iniciando testes do sistema de memória virtual...\n");
 
     // Configuração de teste
-    const size_t MEM_SIZE = 1024 * 1024; // 1MB
+    const size_t MEM_SIZE = 1024 * 32;   // 32KB
     const uint32_t PAGE_SIZE = 4096;     // 4KB
     const uint32_t TLB_SIZE = 4;         // 4 entradas
 
@@ -323,13 +366,21 @@ int main() {
         .MS_SIZE = MEM_SIZE * 16,
         .TLB_SIZE = TLB_SIZE,
         .TIME_SLICE = 10, // 10 unidades de tempo
-        .BITS_LOGICAL_ADDRESS = 12, // 12 bits para endereços lógicos
+        .BITS_LOGICAL_ADDRESS = 16, // 12 bits para endereços lógicos
         .SUB_POLICY_TYPE = SUB_POLICY_CLOCK,
         .FILE_NAME = "test_file"
     });
 
     // Cria processo de teste
-    Process* proc = criar_processo(&sim, 1, "ProcessoTeste", NULL, 0);
+    Process* proc = criar_processo(
+        &sim,
+        1, // PID
+        "ProcessoTeste",
+        NULL, // Instruções não são usadas neste teste
+        0, // Contagem de instruções
+        NULL, // Textos não são usados neste teste
+        0 // Tamanho de textos não é usado neste teste
+    );
 
     //nalloc_print_memory(&sim.main_memory_ctx);
     printf("\n=== Teste 1: Alocação básica de página ===\n");
@@ -352,13 +403,13 @@ int main() {
 
     // Escreve valor
     set_mem(&sim, proc, virt_addr + test_offset, test_value, &status);
-    printf("Escrita em 0x%08X: status %d\n", virt_addr + test_offset, status);
+    printf("Escrita em 0x%08X: status: %s\n", virt_addr + test_offset, ADDR_STATUS(status));
     assert(status == MEM_ACCESS_OK);
 
     // Verifica escrita
     uint8_t read_value = get_mem(&sim, proc, virt_addr + test_offset, &status);
-    printf("Leitura em 0x%08X: valor=0x%02X, status=%d\n",
-           virt_addr + test_offset, read_value, status);
+    printf("Leitura em 0x%08X: valor=0x%02X, status=%s\n",
+           virt_addr + test_offset, read_value, ADDR_STATUS(status));
     assert(status == MEM_ACCESS_OK);
     assert(read_value == test_value);
 
@@ -376,7 +427,7 @@ int main() {
     printf("\n=== Teste 4: Acesso a página não alocada ===\n");
     const uint32_t invalid_addr = 0x8000;
     read_value = get_mem(&sim, proc, invalid_addr, &status);
-    printf("Tentativa de leitura em 0x%08X: status=%d\n", invalid_addr, status);
+    printf("Tentativa de leitura em 0x%08X: status=%s\n", invalid_addr, ADDR_STATUS(status));
     assert(status == MEM_ACCESS_PAGE_NOT_ALLOCATED);
 
     printf("\n=== Teste 5: Expansão automática da tabela de páginas ===\n");
@@ -392,7 +443,7 @@ int main() {
     printf("\n=== Teste 6: Desalocação de página ===\n");
     deallocate_page(&sim, proc, virt_addr);
     read_value = get_mem(&sim, proc, virt_addr, &status);
-    printf("Tentativa de leitura após desalocação: status=%d\n", status);
+    printf("Tentativa de leitura após desalocação: status=%s\n", ADDR_STATUS(status));
     assert(status == MEM_ACCESS_PAGE_NOT_ALLOCATED);
 
     // Verifica se entrada foi invalidada na TLB
@@ -406,9 +457,10 @@ int main() {
     printf("TLB lookup após reset: %s\n", tlb_hit ? "HIT" : "MISS");
     assert(!tlb_hit);
 
+    nalloc_print_memory(&sim.main_memory_ctx);
     // Limpeza
-    destroy_page_table(&sim.main_memory_ctx, proc->page_table);
-    destroy_tlb(&sim.main_memory_ctx, sim.tlb);
+    destroy_simulator(&sim);
+    nalloc_print_memory(&sim.main_memory_ctx);
 
     printf("\nTodos os testes passaram com sucesso!\n");
     return EXIT_SUCCESS;

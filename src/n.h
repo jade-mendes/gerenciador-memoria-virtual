@@ -3,6 +3,7 @@
 //
 
 #ifndef N_H
+#define N_H
 
 #define MAX_NAME_LEN 8 // 7 caracteres + \0
 
@@ -15,6 +16,7 @@ typedef enum {
     INST_PRINT_P,
     INST_PRINT_S,
     INST_ASSIGN,
+    INST_ASSIGN_VAR_NUM,
     INST_ASSIGN_ADD_NUM,
     INST_ASSIGN_SUB_NUM,
     INST_ASSIGN_ADD_VAR,
@@ -44,6 +46,7 @@ typedef union {
     struct { char process_name[MAX_NAME_LEN]; } create;
     struct { char var_name[MAX_NAME_LEN]; uintptr_t add_like; int size; } mmap;
     struct { char var_name[MAX_NAME_LEN]; } print;
+    struct { char var1[MAX_NAME_LEN]; int num; } assign_var_num;
     struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; } assign;
     struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; int num; } assign_num;
     struct { char var1[MAX_NAME_LEN]; char var2[MAX_NAME_LEN]; char var3[MAX_NAME_LEN]; } assign_var;
@@ -67,9 +70,8 @@ typedef struct {
     InstArgs args;
 } Instruction;
 
-void get_instructions(const int fd, Instruction* buffer);
-size_t instructions_amount(const int fd);
+void get_instructions(char* file_name, Instruction **instructions, size_t *count, char **texts_out, int *text_size);
 
-#define N_H
+
 
 #endif //N_H
