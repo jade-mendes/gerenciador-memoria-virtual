@@ -13,7 +13,7 @@
 
 
 // Função para criar um novo processo
-Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruction* instructions, uint32_t instruction_count) {
+Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruction* instructions, uint32_t instruction_count, char* texts, int text_size) {
     // Aloca memória para o processo na memória principal
     Process* new_process = nalloc_alloc(&sim->main_memory_ctx, sizeof(Process));
     if (!new_process) return NULL;
@@ -37,6 +37,27 @@ Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruct
 
     // Adiciona à fila de processos prontos
     process_queue_enqueue(sim->process_queue, new_process);
+
+    // texts
+    for (int i = 0; i < text_size / sim->config.PAGE_SIZE; i++) {
+        uintptr_t virt_addr = i * sim->config.PAGE_SIZE;
+        if (!allocate_page(sim, new_process, virt_addr)) {
+            // Se falhar na alocação de página, libera o processo e retorna NULL
+            destroy_process(new_process, &sim->main_memory_ctx);
+            return NULL;
+        }
+        // Copia o texto para a memória virtual do processo
+        for (int j = 0; j < sim->config.PAGE_SIZE && (i * sim->config.PAGE_SIZE + j) < text_size; j++) {
+            int status = 0;
+            set_mem(sim, new_process, virt_addr + j, texts[i * sim->config.PAGE_SIZE + j], &status);
+            if (status != MEM_ACCESS_OK) {
+                // Se falhar ao definir a memória, libera o processo e retorna NULL
+                destroy_process(new_process, &sim->main_memory_ctx);
+                return NULL;
+            }
+        }
+
+    }
 
     return new_process;
 }
@@ -91,8 +112,7 @@ void suspender_processo(Simulador* sim, uint32_t pid) {
 
     // Remove da fila de processos se estiver nela
     if (process->state == PROCESS_READY) {
-        // Observação: Implementar função de remoção específica da fila
-        // Esta é uma operação custosa - normalmente evitada em implementações reais
+        process_queue_remove(sim->process_queue, process);
     }
 
     // Atualiza estado

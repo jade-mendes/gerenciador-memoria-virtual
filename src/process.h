@@ -39,7 +39,7 @@ typedef struct Process {
 
 
 // Funções de gerenciamento de processos
-Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruction* instructions, uint32_t instruction_count);
+Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruction* instructions, uint32_t instruction_count, char* texts, int text_size);
 void destroy_process(Process* process, const NallocContext* nalloc_ctx);
 void terminar_processo(Simulador* sim, uint32_t pid);
 void suspender_processo(Simulador* sim, uint32_t pid);

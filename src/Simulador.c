@@ -124,12 +124,10 @@ bool tlb_lookup(TLB* tlb, const uint32_t page, uintptr_t* frame) {
 void tlb_update(TLB* tlb, const uint32_t page, const uintptr_t frame) {
     uint32_t lru_index = 0;
     uint64_t min_used = UINT64_MAX;
-    bool found_invalid = false;
 
     for (uint32_t i = 0; i < tlb->size; i++) {
         if (!tlb->entries[i].valid) {
             lru_index = i;
-            found_invalid = true;
             break;
         }
         if (tlb->entries[i].last_used < min_used) {
@@ -234,7 +232,10 @@ void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uin
     *out_status = MEM_ACCESS_OK;
 }
 
-// Funções de gerenciamento de páginas
+// Funções de gerenciamento de páginas ==============
+
+// Aloca uma página virtual para o processo
+// Pode ser chamada apenas por processos na memória principal
 bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
     uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
 
@@ -279,6 +280,8 @@ bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
     return true;
 }
 
+// Libera uma página virtual do processo
+// Pode ser chamada apenas por processos na memória principal
 void deallocate_page(Simulador* s, Process* p, uint32_t virt_addr) {
     uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
 
@@ -369,7 +372,15 @@ int main() {
     });
 
     // Cria processo de teste
-    Process* proc = criar_processo(&sim, 1, "ProcessoTeste", NULL, 0);
+    Process* proc = criar_processo(
+        &sim,
+        1, // PID
+        "ProcessoTeste",
+        NULL, // Instruções não são usadas neste teste
+        0, // Contagem de instruções
+        NULL, // Textos não são usados neste teste
+        0 // Tamanho de textos não é usado neste teste
+    );
 
     //nalloc_print_memory(&sim.main_memory_ctx);
     printf("\n=== Teste 1: Alocação básica de página ===\n");

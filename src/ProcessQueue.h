@@ -33,6 +33,9 @@ bool process_queue_enqueue(ProcessQueue* queue, Process* process);
 // Remove e retorna o processo do início da fila
 Process* process_queue_dequeue(ProcessQueue* queue);
 
+// Remove um processo específico da fila retornando true se encontrado e removido
+bool process_queue_remove(ProcessQueue* queue, Process* target);
+
 // Verifica se a fila está vazia
 bool process_queue_is_empty(const ProcessQueue* queue);
 
@@ -43,6 +46,20 @@ size_t process_queue_size(const ProcessQueue* queue);
 void process_queue_destroy(ProcessQueue* queue);
 
 
+
+// Macro para iteração simples (não segura para remoção durante a iteração)
+#define PROCESS_QUEUE_FOREACH(queue, node_var) \
+for (ProcessQueueNode* node_var = (queue)->front; \
+node_var != NULL; \
+node_var = node_var->next)
+
+// Macro para iteração segura (permite remoção durante a iteração)
+#define PROCESS_QUEUE_FOREACH_SAFE(queue, node_var, next_var) \
+for (ProcessQueueNode *node_var = (queue)->front, \
+*next_var = (node_var ? node_var->next : NULL); \
+node_var != NULL; \
+node_var = next_var, \
+next_var = (node_var ? node_var->next : NULL))
 
 
 #endif //PROCESSQUEUE_H

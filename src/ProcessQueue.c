@@ -61,6 +61,49 @@ Process* process_queue_dequeue(ProcessQueue* queue) {
     return process;
 }
 
+bool process_queue_remove(ProcessQueue* queue, Process* target) {
+    if (queue == NULL || target == NULL || queue->size == 0) {
+        return false;
+    }
+
+    ProcessQueueNode* current = queue->front;
+    ProcessQueueNode* prev = NULL;
+    bool found = false;
+
+    // Percorre a fila procurando pelo processo alvo
+    while (current != NULL) {
+        if (current->process == target) {
+            found = true;
+            break;
+        }
+        prev = current;
+        current = current->next;
+    }
+
+    if (!found) {
+        return false;
+    }
+
+    // Atualiza os ponteiros da fila
+    if (prev == NULL) {
+        // Remoção do primeiro elemento
+        queue->front = current->next;
+    } else {
+        prev->next = current->next;
+    }
+
+    // Atualiza o rear se for o último elemento
+    if (current == queue->rear) {
+        queue->rear = prev;
+    }
+
+    // Libera o nó e atualiza o tamanho
+    nalloc_free(&queue->nalloc_ctx, current);
+    queue->size--;
+
+    return true;
+}
+
 bool process_queue_is_empty(const ProcessQueue* queue) {
     return queue ? (queue->front == NULL) : true;
 }
