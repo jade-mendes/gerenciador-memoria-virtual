@@ -3,6 +3,9 @@
 //
 
 #include "tabelas.h"
+
+#include <string.h>
+
 #include "process.h"
 #include "Simulador.h"
 
@@ -140,7 +143,9 @@ bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
         return true; // Página já alocada
     }
 
-    uintptr_t frame_addr = (uintptr_t) nalloc_alloc(&s->main_memory_ctx, s->config.PAGE_SIZE);
+    const NallocContext* context = p->state == PROCESS_SUSPENDED ? &s->secondary_memory_ctx : &s->main_memory_ctx;
+
+    uintptr_t frame_addr = (uintptr_t) nalloc_alloc(context, s->config.PAGE_SIZE);
     if (!frame_addr) {
         return false; // Falha na alocação de memória
     }
@@ -148,13 +153,13 @@ bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
     if (page_num >= p->page_table->num_entries) {
         uint32_t new_num_entries = page_num + 1;
         PAGE_TABLE_ENTRY* new_entries = nalloc_realloc(
-            &s->main_memory_ctx,
+            context,
             p->page_table->entries,
             new_num_entries * sizeof(PAGE_TABLE_ENTRY)
         );
 
         if (!new_entries) {
-            nalloc_free(&s->main_memory_ctx, (void*) frame_addr);
+            nalloc_free(context, (void*) frame_addr);
             return false; // Falha na realocação de memória
         }
 
@@ -186,9 +191,11 @@ void deallocate_page(Simulador* s, Process* p, uint32_t virt_addr) {
         return;
     }
 
+    const NallocContext* context = p->state == PROCESS_SUSPENDED ? &s->secondary_memory_ctx : &s->main_memory_ctx;
+
     void* frame_addr = (void*) p->page_table->entries[page_num].frame;
 
-    nalloc_free(&s->main_memory_ctx, frame_addr);
+    nalloc_free(context, frame_addr);
     p->page_table->entries[page_num].valid = false;
     tlb_invalidate_entry(s->tlb, page_num);
 }
@@ -204,9 +211,22 @@ PAGE_TABLE* create_page_table(const NallocContext* ctx) {
 }
 
 void destroy_page_table(const NallocContext* ctx, PAGE_TABLE* pt) {
+    if (!pt) return;
+
     if (pt->entries) {
+        for (uint32_t i = 0; i < pt->num_entries; i++) {
+            if (pt->entries[i].valid) {
+                // Libera o frame associado à página
+                void* frame_addr = (void*) pt->entries[i].frame;
+                if (frame_addr) {
+                    nalloc_free(ctx, frame_addr);
+                }
+            }
+        }
+
         nalloc_free(ctx, pt->entries);
     }
+
     nalloc_free(ctx, pt);
 }
 
@@ -244,5 +264,63 @@ void destroy_process_pages(Simulador* s, Process* p) {
             deallocate_page(s, p, i * s->config.PAGE_SIZE);
         }
     }
+}
+
+
+
+
+PAGE_TABLE* page_table_clone(const NallocContext* new_ctx, const PAGE_TABLE* original_pt, const uint32_t page_size) {
+    // Alocar nova estrutura de tabela de páginas
+    PAGE_TABLE* new_pt = nalloc_alloc(new_ctx, sizeof(PAGE_TABLE));
+    if (!new_pt) return NULL;
+
+    // Inicializar campos
+    new_pt->num_entries = original_pt->num_entries;
+    new_pt->entries = NULL;
+
+    // Alocar array de entradas se necessário
+    if (new_pt->num_entries > 0) {
+        new_pt->entries = nalloc_alloc(new_ctx, new_pt->num_entries * sizeof(PAGE_TABLE_ENTRY));
+        if (!new_pt->entries) {
+            nalloc_free(new_ctx, new_pt);
+            return NULL;
+        }
+
+        // Copiar cada entrada
+        for (uint32_t i = 0; i < new_pt->num_entries; i++) {
+            const PAGE_TABLE_ENTRY* orig_entry = &original_pt->entries[i];
+            PAGE_TABLE_ENTRY* new_entry = &new_pt->entries[i];
+
+            // Copiar flags básicas
+            new_entry->valid = orig_entry->valid;
+            new_entry->dirty = orig_entry->dirty;
+            new_entry->referenced = orig_entry->referenced;
+
+            // Tratar frames válidos
+            if (orig_entry->valid) {
+                // Alocar novo frame
+                uintptr_t new_frame = (uintptr_t) nalloc_alloc(new_ctx, page_size);
+                if (!new_frame) {
+                    // Liberar recursos alocados até agora
+                    for (uint32_t j = 0; j < i; j++) {
+                        if (new_pt->entries[j].valid) {
+                            nalloc_free(new_ctx, (void*)new_pt->entries[j].frame);
+                        }
+                    }
+                    nalloc_free(new_ctx, new_pt->entries);
+                    nalloc_free(new_ctx, new_pt);
+                    return NULL;
+                }
+
+                // Copiar conteúdo do frame original
+                memcpy((void*)new_frame, (void*)orig_entry->frame, page_size);
+                new_entry->frame = new_frame;
+            } else {
+                new_entry->frame = INVALID_FRAME;
+            }
+        }
+    }
+
+    return new_pt;
 }
 

@@ -69,8 +69,11 @@ void deallocate_page(Simulador* s, Process* p, uint32_t virt_addr);
 // Funções de criação/destruição
 PAGE_TABLE* create_page_table(const NallocContext* ctx);
 void destroy_page_table(const NallocContext* ctx, PAGE_TABLE* pt);
+PAGE_TABLE* page_table_clone(const NallocContext* new_ctx, const PAGE_TABLE* original_pt, const uint32_t page_size);
+
 TLB* create_tlb(NallocContext* ctx, uint32_t size);
 void destroy_tlb(const NallocContext* ctx, TLB* tlb);
+
 
 // Função para destruir páginas de um processo
 void destroy_process_pages(Simulador* s, Process* p);

@@ -1,6 +1,7 @@
 {
-  "cycle": 0,
-  "memory_usage": 72,
+  "cycle": 4,
+  "main-memory_usage": 72,
+  "secondary-memory_usage": 35,
   "process_queue": [
     {"name": "terminal", "icon": "icons/terminal.png"},
     {"name": "vlc", "icon": "icons/vlc.png"},

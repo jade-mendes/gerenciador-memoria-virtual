@@ -43,6 +43,10 @@ bool hashmap_remove(HashMap* map, const char* key);
 /// Destroi o hashmap e libera toda a memória associada
 void hashmap_destroy(HashMap* map);
 
+/// Clona um hashmap para um novo contexto de alocação
+/// Retorna o novo hashmap ou NULL em caso de falha
+HashMap* hashmap_clone(NallocContext* dest_ctx, const HashMap* src);
+
 void print_hashmap(const HashMap* map);
 
 #endif // HASHMAP_H

@@ -34,6 +34,9 @@ bool process_hashmap_put(ProcessHashMap* map, uint32_t pid, Process* process);
 // Obtém um processo do hashmap pelo PID
 bool process_hashmap_get(ProcessHashMap* map, uint32_t pid, Process** out_process);
 
+// Verifica se ao menos um processo está presente no hashmap
+bool process_hashmap_is_empty(ProcessHashMap* map);
+
 // Remove um processo do hashmap pelo PID
 bool process_hashmap_remove(ProcessHashMap* map, uint32_t pid);
 

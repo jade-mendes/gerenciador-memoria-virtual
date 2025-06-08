@@ -323,12 +323,15 @@ void inst_create(char *process_name, const size_t pid) {
 
     snprintf(process_output, MAX_MSG_SIZE, "Criando processo: %s", process_name);
 
+    char file_name[100];
+    snprintf(file_name, sizeof(file_name), "./process/%s.bin", process_name);
+
     get_instructions(process_name, &instructions, &instruction_count, &text_out, &text_size);
 
     criar_processo(simulador, rand(), process_name, instructions, instruction_count, text_out, text_size);
 
     free(instructions);
-    free(text_out);
+    if (text_out) free(text_out);
 }
 
 void inst_terminate(const size_t pid) {
@@ -537,8 +540,8 @@ int main() {
 
     // Configuração básica do simulador
     SimulationConfig config = {
-        .PAGE_SIZE = 4096,
-        .MP_SIZE = 1024 * 1024 * 4, // 4 MB
+        .PAGE_SIZE = 8,
+        .MP_SIZE = 1024 * 16,
         .MS_SIZE = 1024 * 1024 * 16, // 16 MB
         .TLB_SIZE = 16,
         .TIME_SLICE = 10,
@@ -548,8 +551,8 @@ int main() {
     strcpy(config.FILE_NAME, filename);
 
     // Inicializar simulador
-    Simulador sim = create_simulator(config);
-    simulador = &sim;
+    Simulador* sim = create_simulator(config);
+    simulador = sim;
 
     // Ler instruções do arquivo
     Instruction *instructions;
@@ -560,59 +563,13 @@ int main() {
     get_instructions(filename, &instructions, &instruction_count, &text_out, &text_size);
 
     // Criar processo principal
-    Process* main_process = criar_processo(simulador, 1, "main", instructions, instruction_count, text_out, text_size);
-    simulador->current_process = main_process;
+    criar_processo(simulador, 1, "main", instructions, instruction_count, text_out, text_size);
 
     // Loop de execução
-    while (simulador->current_process && simulador->current_process->instruction_index < instruction_count) {
-
-        // Preparar para nova instrução
-        process_input[0] = '\0';
-        process_error[0] = '\0';
-        process_output[0] = '\0';
-
-        // Obter instrução atual
-        size_t current_index = simulador->current_process->instruction_index;
-        Instruction current_inst = instructions[current_index];
-
-        // Mostrar estado atual
-        printf("\n=== Instruction %zu ===", current_index);
-        printf("\nProcesso: %s [%u]",
-               simulador->current_process->name,
-               simulador->current_process->pid);
-
-        // Solicitar entrada do usuário
-        if (current_inst.type == INST_INPUT_N || current_inst.type == INST_INPUT_S) {
-            printf("\nEntrada necessaria: ");
-            fgets(process_input, MAX_MSG_SIZE, stdin);
-            // Remover newline
-            len = strlen(process_input);
-            if (len > 0 && process_input[len-1] == '\n') {
-                process_input[len-1] = '\0';
-            }
-        }
-
-        // Executar instrução
-        execute(current_index, simulador->current_process->pid, instructions);
-
-        if (process_error[0] != '\0') {
-            printf("\n\033[31mErro: %s\033[0m", process_error);
-        }
-        else if (process_output[0] != '\0') {
-            printf("\n\033[34m%s\033[0m", process_output);
-        }
-
-        // printf("\nVariables: \n");
-        // print_hashmap(simulador->current_process->variables_adrr);
-        // printf("\n");
-
-        simulador->current_process->instruction_index++;
-    }
+    while (proxima_acao(simulador)) {}
 
     // Limpeza final
     destroy_simulator(simulador);
-    free(instructions);
-    if (text_out) free(text_out);
 
     return 0;
 }

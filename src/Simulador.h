@@ -52,9 +52,11 @@ typedef struct Simulador {
 extern Simulador* simulador;
 
 // Funções do simulador
-Simulador create_simulator(const SimulationConfig config);
+Simulador* create_simulator(const SimulationConfig config);
 void destroy_simulator(Simulador* sim);
 Process* get_process_by_pid(Simulador* simulador, uint32_t pid);
+bool proxima_acao(Simulador* sim);
+char* generate_simulator_json(Simulador* sim);
 
 
 

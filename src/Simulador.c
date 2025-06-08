@@ -17,15 +17,24 @@
 
 Simulador* simulador;
 
-void proxima_acao(Simulador* sim) {
+bool proxima_acao(Simulador* sim) {
+    bool ret = true;
+
     if (!sim->current_process) {
         // Escalona novo processo se disponível
         if (!process_queue_is_empty(sim->process_queue)) {
             sim->current_process = process_queue_dequeue(sim->process_queue);
             sim->current_process->state = PROCESS_RUNNING;
             sim->current_process->time_slice_remaining = sim->config.TIME_SLICE;
+
+            reset_tlb_validity(sim->tlb);
         }
-        return;
+        else {
+            // Se não há processos prontos, termina a simulação
+            printf("\n\033[31mNenhum processo pronto para executar.\033[0m\n");
+            ret = false;
+            goto escalonamento;
+        }
     }
 
     // Executa próxima instrução
@@ -46,7 +55,10 @@ void proxima_acao(Simulador* sim) {
 
         // Solicitar entrada do usuário
         if ((current_inst.type == INST_INPUT_N || current_inst.type == INST_INPUT_S) && process_input[0] == '\0') {
+            sprintf(process_output, "Aguardando entrada do usuário para processo %s [%u]", sim->current_process->name, sim->current_process->pid);
+            printf("\n\033[33m%s\033[0m", process_output);
             bloquear_processo_atual(sim, IO, 0);
+            return true;
         }
 
         // Executar instrução
@@ -77,13 +89,13 @@ void proxima_acao(Simulador* sim) {
         sim->current_process = NULL;
     }
 
+    escalonamento:
     // verificar se tem coisa para desbloquear
     PROCESS_HASHMAP_FOREACH(sim->process_map_main, process) {
         if (process->value->state == PROCESS_BLOCKED && process->value->blocked_reason == IO) {
             // Desbloqueia o processo se houver entrada do usuário
             if (process_input[0] != '\0') {
-                process->value->state = PROCESS_READY;
-                process_queue_enqueue(sim->process_queue, process->value);
+                desbloquear_processo(sim, process->value);
                 process_input[0] = '\0'; // Limpa a entrada após desbloquear
 
                 printf("\nProcesso %s [%u] desbloqueado por IO", process->value->name, process->value->pid);
@@ -92,8 +104,7 @@ void proxima_acao(Simulador* sim) {
         else if (process->value->state == PROCESS_BLOCKED && process->value->blocked_reason == UNKNOWN_REASON) {
             if (rand() % 4 == 0) {
                 // Simula desbloqueio aleatório
-                process->value->state = PROCESS_READY;
-                process_queue_enqueue(sim->process_queue, process->value);
+                desbloquear_processo(sim, process->value);
 
                 printf("\nProcesso %s [%u] desbloqueado aleatoriamente", process->value->name, process->value->pid);
             }
@@ -104,18 +115,27 @@ void proxima_acao(Simulador* sim) {
     PROCESS_HASHMAP_FOREACH_SAFE(sim->process_map_secondary, entry_var, next_var) {
         if (entry_var->value->state == PROCESS_SUSPENDED) {
             // Desuspende o processo
-            desuspender_processo(sim, entry_var->key);
-            printf("\nProcesso %s [%u] desuspenso", entry_var->value->name, entry_var->value->pid);
+            if (try_swipe(sim, entry_var->value)) {
+                // Se a troca foi bem-sucedida, remove do mapa de secundária
+                printf("\nProcesso %s [%u] desuspenso e movido para memória principal", entry_var->value->name, entry_var->value->pid);
+            }
         }
     }
 
+    char* json = generate_simulator_json(sim);
+    if (json) {
+        printf("\n\033[32m%s\033[0m\n", json);
+        free(json);
+    }
+
     sim->current_cycle++;
+    return ret;
 }
 
-Simulador create_simulator(const SimulationConfig config) {
-    Simulador sim = {0};
+Simulador* create_simulator(const SimulationConfig config) {
+    Simulador* sim = malloc(sizeof(Simulador));
 
-    sim.config = config;
+    sim->config = config;
 
     // Inicializa contextos de alocação
     void* main_memory_buffer = malloc(config.MP_SIZE);
@@ -129,18 +149,18 @@ Simulador create_simulator(const SimulationConfig config) {
         free(main_memory_buffer);
         exit(EXIT_FAILURE);
     }
-    sim.main_memory_ctx = nalloc_init(main_memory_buffer, config.MP_SIZE);
-    sim.secondary_memory_ctx = nalloc_init(secondary_memory_buffer, config.MS_SIZE);
+    sim->main_memory_ctx = nalloc_init(main_memory_buffer, config.MP_SIZE);
+    sim->secondary_memory_ctx = nalloc_init(secondary_memory_buffer, config.MS_SIZE);
 
     // Cria mapa de processos
-    sim.process_map_main = process_hashmap_create(sim.main_memory_ctx, 10);
-    sim.process_map_secondary = process_hashmap_create(sim.secondary_memory_ctx, 10);
+    sim->process_map_main = process_hashmap_create(sim->main_memory_ctx, 10);
+    sim->process_map_secondary = process_hashmap_create(sim->secondary_memory_ctx, 10);
 
     // Cria fila de processos
-    sim.process_queue = process_queue_create(sim.main_memory_ctx);
+    sim->process_queue = process_queue_create(sim->main_memory_ctx);
 
     // Cria TLB
-    sim.tlb = create_tlb(&sim.main_memory_ctx, config.TLB_SIZE);
+    sim->tlb = create_tlb(&sim->main_memory_ctx, config.TLB_SIZE);
 
     return sim;
 }
@@ -170,6 +190,7 @@ void destroy_simulator(Simulador* sim) {
     // Libera contextos de alocação
     free(sim->main_memory_ctx.base_addr);
     free(sim->secondary_memory_ctx.base_addr);
+    free(sim);
 }
 
 Process* get_process_by_pid(Simulador* simulador, uint32_t pid) {
@@ -189,122 +210,218 @@ Process* get_process_by_pid(Simulador* simulador, uint32_t pid) {
     return NULL;
 }
 
-// =========================
 
 
 
 
-// int main() {
-//     printf("Iniciando testes do sistema de memória virtual...\n");
-//
-//     // Configuração de teste
-//     const size_t MEM_SIZE = 1024 * 32;   // 32KB
-//     const uint32_t PAGE_SIZE = 4096;     // 4KB
-//     const uint32_t TLB_SIZE = 4;         // 4 entradas
-//
-//     // Inicializa simulador
-//     Simulador sim = create_simulator((SimulationConfig){
-//         .PAGE_SIZE = PAGE_SIZE,
-//         .MP_SIZE = MEM_SIZE,
-//         .MS_SIZE = MEM_SIZE * 16,
-//         .TLB_SIZE = TLB_SIZE,
-//         .TIME_SLICE = 10, // 10 unidades de tempo
-//         .BITS_LOGICAL_ADDRESS = 16, // 12 bits para endereços lógicos
-//         .SUB_POLICY_TYPE = SUB_POLICY_CLOCK,
-//         .FILE_NAME = "test_file"
-//     });
-//
-//     // Cria processo de teste
-//     Process* proc = criar_processo(
-//         &sim,
-//         1, // PID
-//         "ProcessoTeste",
-//         NULL, // Instruções não são usadas neste teste
-//         0, // Contagem de instruções
-//         NULL, // Textos não são usados neste teste
-//         0 // Tamanho de textos não é usado neste teste
-//     );
-//
-//     //nalloc_print_memory(&sim.main_memory_ctx);
-//     printf("\n=== Teste 1: Alocação básica de página ===\n");
-//     const uint32_t virt_addr = 0x4000;
-//     bool alloc_success = allocate_page(&sim, proc, virt_addr);
-//     printf("Alocação em 0x%08X: %s\n", virt_addr, alloc_success ? "SUCESSO" : "FALHA");
-//     assert(alloc_success);
-//
-//     // Verifica se a entrada na tabela de páginas está correta
-//     uint32_t page_num = virt_addr / PAGE_SIZE;
-//     assert(page_num < proc->page_table->num_entries);
-//     assert(proc->page_table->entries[page_num].valid);
-//     assert(proc->page_table->entries[page_num].frame != 0);
-//
-//     //nalloc_print_memory(&sim.main_memory_ctx);
-//     printf("\n=== Teste 2: Escrita e leitura de memória ===\n");
-//     int status;
-//     const uint8_t test_value = 0xAB;
-//     const uint32_t test_offset = 0x100;
-//
-//     // Escreve valor
-//     set_mem(&sim, proc, virt_addr + test_offset, test_value, &status);
-//     printf("Escrita em 0x%08X: status: %s\n", virt_addr + test_offset, ADDR_STATUS(status));
-//     assert(status == MEM_ACCESS_OK);
-//
-//     // Verifica escrita
-//     uint8_t read_value = get_mem(&sim, proc, virt_addr + test_offset, &status);
-//     printf("Leitura em 0x%08X: valor=0x%02X, status=%s\n",
-//            virt_addr + test_offset, read_value, ADDR_STATUS(status));
-//     assert(status == MEM_ACCESS_OK);
-//     assert(read_value == test_value);
-//
-//     // Verifica se bits de referência e modificação foram setados
-//     assert(proc->page_table->entries[page_num].referenced);
-//     assert(proc->page_table->entries[page_num].dirty);
-//
-//     printf("\n=== Teste 3: Verificação da TLB ===\n");
-//     uintptr_t frame_addr;
-//     bool tlb_hit = tlb_lookup(sim.tlb, page_num, &frame_addr);
-//     printf("TLB lookup: %s\n", tlb_hit ? "HIT" : "MISS");
-//     assert(tlb_hit);
-//     assert(frame_addr == proc->page_table->entries[page_num].frame);
-//
-//     printf("\n=== Teste 4: Acesso a página não alocada ===\n");
-//     const uint32_t invalid_addr = 0x8000;
-//     read_value = get_mem(&sim, proc, invalid_addr, &status);
-//     printf("Tentativa de leitura em 0x%08X: status=%s\n", invalid_addr, ADDR_STATUS(status));
-//     assert(status == MEM_ACCESS_PAGE_NOT_ALLOCATED);
-//
-//     printf("\n=== Teste 5: Expansão automática da tabela de páginas ===\n");
-//     const uint32_t high_addr = 0x100000; // 1MB
-//     alloc_success = allocate_page(&sim, proc, high_addr);
-//     printf("Alocação em 0x%08X: %s\n", high_addr, alloc_success ? "SUCESSO" : "FALHA");
-//     assert(alloc_success);
-//
-//     uint32_t high_page_num = high_addr / PAGE_SIZE;
-//     assert(high_page_num < proc->page_table->num_entries);
-//     assert(proc->page_table->entries[high_page_num].valid);
-//
-//     printf("\n=== Teste 6: Desalocação de página ===\n");
-//     deallocate_page(&sim, proc, virt_addr);
-//     read_value = get_mem(&sim, proc, virt_addr, &status);
-//     printf("Tentativa de leitura após desalocação: status=%s\n", ADDR_STATUS(status));
-//     assert(status == MEM_ACCESS_PAGE_NOT_ALLOCATED);
-//
-//     // Verifica se entrada foi invalidada na TLB
-//     tlb_hit = tlb_lookup(sim.tlb, page_num, &frame_addr);
-//     printf("TLB lookup após desalocação: %s\n", tlb_hit ? "HIT" : "MISS");
-//     assert(!tlb_hit);
-//
-//     printf("\n=== Teste 7: Reset da TLB ===\n");
-//     reset_tlb_validity(sim.tlb);
-//     tlb_hit = tlb_lookup(sim.tlb, high_page_num, &frame_addr);
-//     printf("TLB lookup após reset: %s\n", tlb_hit ? "HIT" : "MISS");
-//     assert(!tlb_hit);
-//
-//     nalloc_print_memory(&sim.main_memory_ctx);
-//     // Limpeza
-//     destroy_simulator(&sim);
-//     nalloc_print_memory(&sim.main_memory_ctx);
-//
-//     printf("\nTodos os testes passaram com sucesso!\n");
-//     return EXIT_SUCCESS;
-// }
+// Make json ==========================================================================================================
+
+// Implementação do StringBuilder para construção eficiente de JSON
+typedef struct {
+    char* data;
+    size_t length;
+    size_t capacity;
+} StringBuilder;
+
+static void sb_init(StringBuilder* sb) {
+    sb->data = NULL;
+    sb->length = 0;
+    sb->capacity = 0;
+}
+
+static void sb_append(StringBuilder* sb, const char* str) {
+    size_t len = strlen(str);
+    if (sb->length + len + 1 > sb->capacity) {
+        size_t new_capacity = sb->capacity == 0 ? 1024 : sb->capacity * 2;
+        while (sb->length + len + 1 > new_capacity) {
+            new_capacity *= 2;
+        }
+        char* new_data = realloc(sb->data, new_capacity);
+        if (!new_data) return;
+        sb->data = new_data;
+        sb->capacity = new_capacity;
+    }
+    memcpy(sb->data + sb->length, str, len);
+    sb->length += len;
+    sb->data[sb->length] = '\0';
+}
+
+static char* sb_finalize(StringBuilder* sb) {
+    char* result = sb->data;
+    sb_init(sb);
+    return result;
+}
+
+// Função auxiliar para converter estado do processo para string
+static const char* process_state_to_str(ProcessState state) {
+    switch(state) {
+        case PROCESS_RUNNING:   return "Executando";
+        case PROCESS_READY:     return "Pronto";
+        case PROCESS_SUSPENDED:  return "Suspenso";
+        case PROCESS_BLOCKED:   return "Bloqueado";
+        default:                return "Desconhecido";
+    }
+}
+
+char* generate_simulator_json(Simulador* sim) {
+    StringBuilder sb;
+    sb_init(&sb);
+    char buffer[2048];  // Buffer maior para lidar com strings complexas
+
+    // Cabeçalho do JSON com informações básicas
+    snprintf(buffer, sizeof(buffer),
+        "{\n"
+        "\"cycle\": %u,\n"
+        "\"main-memory_usage\": %f,\n"
+        "\"secondary-memory_usage\": %f,\n",
+        sim->current_cycle,
+        (float) nalloc_allocated_size(&sim->main_memory_ctx) / sim->main_memory_ctx.total_size,
+        (float) nalloc_allocated_size(&sim->secondary_memory_ctx) / sim->secondary_memory_ctx.total_size);
+    sb_append(&sb, buffer);
+
+    // Fila de processos if not empty
+    if (process_queue_is_empty(sim->process_queue)) {
+        sb_append(&sb, "\"process_queue\": [],\n");
+    } else {
+        sb_append(&sb, "\"process_queue\": [\n");
+        bool first_queue = true;
+        PROCESS_QUEUE_FOREACH(sim->process_queue, node) {
+            if (!first_queue) sb_append(&sb, ",\n");
+            first_queue = false;
+            snprintf(buffer, sizeof(buffer), "  {\"name\": \"%s\", \"icon\": \"icons/%s.png\"}",
+                     node->process->name, node->process->name);
+            sb_append(&sb, buffer);
+        }
+        sb_append(&sb, "\n],\n");
+    }
+
+    // Processo atual
+    if (sim->current_process) {
+        snprintf(buffer, sizeof(buffer),
+            "\"current_process\": {\n"
+            "  \"name\": \"%s\",\n"
+            "  \"icon\": \"icons/%s.png\",\n"
+            "  \"last_msg\": \"%s\"\n"
+            "},\n",
+            sim->current_process->name,
+            sim->current_process->name,
+            process_error[0] == '\0' ? process_output : process_error
+        );
+    } else {
+        snprintf(buffer, sizeof(buffer), "\"current_process\": null,\n");
+    }
+    sb_append(&sb, buffer);
+
+    // Lista de processos
+    sb_append(&sb, "\"process_list\": [\n");
+    bool first_process = true;
+
+    // Processos na memória principal
+    if (!process_hashmap_is_empty(sim->process_map_main)) {
+        PROCESS_HASHMAP_FOREACH(sim->process_map_main, entry) {
+            Process* p = entry->value;
+
+            if (!first_process) sb_append(&sb, ",\n");
+            first_process = false;
+
+            snprintf(buffer, sizeof(buffer),
+                "  {\n"
+                "    \"name\": \"%s\",\n"
+                "    \"pid\": %u,\n"
+                "    \"state\": \"%s\",\n"
+                "    \"page_table\": [\n",
+                p->name, p->pid, process_state_to_str(p->state));
+            sb_append(&sb, buffer);
+
+            // Entradas da tabela de páginas
+            bool first_page = true;
+            for (uint32_t i = 0; i < p->page_table->num_entries; i++) {
+                PAGE_TABLE_ENTRY* entry = &p->page_table->entries[i];
+                if (entry->valid) {
+                    if (!first_page) sb_append(&sb, ",\n");
+                    first_page = false;
+
+                    uint32_t virt_addr = i * sim->config.PAGE_SIZE;
+                    uint32_t phys_addr = (uint32_t)(entry->frame) * sim->config.PAGE_SIZE;
+
+                    snprintf(buffer, sizeof(buffer),
+                        "      {\"virtual\": \"0x%04x\", \"real\": \"0x%04x\"}",
+                        virt_addr, phys_addr);
+                    sb_append(&sb, buffer);
+                }
+            }
+            sb_append(&sb, "\n    ]\n  }");
+        }
+    }
+
+
+    // Processos na memória secundária
+    if (!process_hashmap_is_empty(sim->process_map_secondary)) {
+        PROCESS_HASHMAP_FOREACH(sim->process_map_secondary, entry) {
+            Process* p = entry->value;
+
+            if (!first_process) sb_append(&sb, ",\n");
+            first_process = false;
+
+            snprintf(buffer, sizeof(buffer),
+                "  {\n"
+                "    \"name\": \"%s\",\n"
+                "    \"pid\": %u,\n"
+                "    \"state\": \"%s\",\n"
+                "    \"page_table\": [\n",
+                p->name, p->pid, process_state_to_str(p->state));
+            sb_append(&sb, buffer);
+
+            // Entradas da tabela de páginas
+            bool first_page = true;
+            for (uint32_t i = 0; i < p->page_table->num_entries; i++) {
+                PAGE_TABLE_ENTRY* entry = &p->page_table->entries[i];
+                if (entry->valid) {
+                    if (!first_page) sb_append(&sb, ",\n");
+                    first_page = false;
+
+                    uint32_t virt_addr = i * sim->config.PAGE_SIZE;
+                    uint32_t phys_addr = (uint32_t)(entry->frame) * sim->config.PAGE_SIZE;
+
+                    snprintf(buffer, sizeof(buffer),
+                        "      {\"virtual\": \"0x%04x\", \"real\": \"0x%04x\"}",
+                        virt_addr, phys_addr);
+                    sb_append(&sb, buffer);
+                }
+            }
+            sb_append(&sb, "\n    ]\n  }");
+        }
+    }
+    sb_append(&sb, "\n],\n");
+
+    // TLB
+    if (sim->tlb) {
+        sb_append(&sb, "\"tlb\": [\n");
+        bool first_tlb = true;
+        for (uint32_t i = 0; i < sim->tlb->size; i++) {
+            TLB_ENTRY* entry = &sim->tlb->entries[i];
+            if (entry->valid) {
+                if (!first_tlb) sb_append(&sb, ",\n");
+                first_tlb = false;
+
+                uint32_t virt_addr = entry->page * sim->config.PAGE_SIZE;
+                uint32_t phys_addr = (uint32_t)(entry->frame) * sim->config.PAGE_SIZE;
+
+                // Flag da TLB
+                const char* referenced = entry->valid ? "Sim" : "Não";
+                snprintf(buffer, sizeof(buffer),
+                    "  {\"virtual\": \"0x%04x\", \"real\": \"0x%04x\", "
+                    "\"last_used\": \"%lu\", \"referenced\": \"%s\"}",
+                    virt_addr, phys_addr, entry->last_used, referenced);
+                sb_append(&sb, buffer);
+            }
+        }
+        sb_append(&sb, "\n]\n}");
+    }
+    else {
+        sb_append(&sb, "\"tlb\": [],\n");
+    }
+
+
+    return sb_finalize(&sb);
+}

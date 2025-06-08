@@ -67,6 +67,18 @@ bool process_hashmap_get(ProcessHashMap* map, uint32_t pid, Process** out_proces
     return false;
 }
 
+bool process_hashmap_is_empty(ProcessHashMap* map) {
+    if (!map || !map->buckets) {
+        return true; // Mapa não inicializado ou sem buckets
+    }
+    for (size_t i = 0; i < map->capacity; i++) {
+        if (map->buckets[i]) {
+            return false; // Pelo menos um bucket não está vazio
+        }
+    }
+    return true; // Todos os buckets estão vazios
+}
+
 bool process_hashmap_remove(ProcessHashMap* map, uint32_t pid) {
     size_t index = pid_hash_func(pid, map->capacity);
     ProcessHashMapEntry* current = map->buckets[index];

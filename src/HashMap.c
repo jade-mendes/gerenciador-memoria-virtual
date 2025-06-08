@@ -114,6 +114,8 @@ bool hashmap_remove(HashMap* map, const char* key) {
 
 // Destroi o hashmap e libera toda a memória
 void hashmap_destroy(HashMap* map) {
+    if (!map) return;
+
     for (size_t i = 0; i < map->capacity; i++) {
         HashMapEntry* current = map->buckets[i];
         while (current) {
@@ -138,4 +140,47 @@ void print_hashmap(const HashMap* map) {
             printf("NULL\n");
         }
     }
+}
+
+HashMap* hashmap_clone(NallocContext* dest_ctx, const HashMap* src) {
+    // Cria um novo hashmap com a mesma capacidade
+    HashMap* new_map = hashmap_create(dest_ctx, src->capacity);
+    if (!new_map) return NULL;
+
+    // Clona todas as entradas
+    for (size_t i = 0; i < src->capacity; i++) {
+        // Clona a lista encadeada do bucket atual (mantendo ordem inversa)
+        HashMapEntry* new_list = NULL;
+        const HashMapEntry* current = src->buckets[i];
+
+        while (current) {
+            // Aloca nova entrada
+            HashMapEntry* new_entry = nalloc_alloc(dest_ctx, sizeof(HashMapEntry));
+            if (!new_entry) {
+                // Falha: limpar entradas já alocadas neste bucket
+                while (new_list) {
+                    HashMapEntry* temp = new_list;
+                    new_list = new_list->next;
+                    nalloc_free(dest_ctx, temp);
+                }
+                hashmap_destroy(new_map);
+                return NULL;
+            }
+
+            // Copia dados
+            memcpy(new_entry->key, current->key, KEY_SIZE);
+            new_entry->value = current->value;
+
+            // Insere no início da lista (mantém ordem inversa)
+            new_entry->next = new_list;
+            new_list = new_entry;
+
+            current = current->next;
+        }
+
+        // Atualiza o bucket do novo mapa
+        new_map->buckets[i] = new_list;
+    }
+
+    return new_map;
 }

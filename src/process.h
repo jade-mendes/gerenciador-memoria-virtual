@@ -52,6 +52,9 @@ Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruct
 void terminar_processo(Simulador* sim, Process* process);
 
 void bloquear_processo_atual(Simulador* sim, const BlockReason reason, const uint32_t info);
+void desbloquear_processo(const Simulador* sim, Process* process);
+
+bool try_swipe(Simulador* sim, Process* process);
 
 #define PROCESS_H
 

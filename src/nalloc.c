@@ -87,6 +87,9 @@ void* nalloc_realloc(const NallocContext* ctx, void* ptr, size_t size) {
 
 // Calcula o total de memória alocada no contexto
 size_t nalloc_allocated_size(NallocContext* ctx) {
+    if (!ctx || !ctx->base_addr || ctx->total_size == 0) {
+        return 0; // Contexto inválido ou sem memória
+    }
     size_t total = 0;
     void* current = ctx->base_addr;
     const void* end = (char*)ctx->base_addr + ctx->total_size;
