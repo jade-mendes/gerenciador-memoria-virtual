@@ -46,7 +46,7 @@ void proxima_acao(Simulador* sim) {
 
         // Solicitar entrada do usuário
         if ((current_inst.type == INST_INPUT_N || current_inst.type == INST_INPUT_S) && process_input[0] == '\0') {
-            bloquear_processo(sim, sim->current_process->pid, IO, 0);
+            bloquear_processo_atual(sim, IO, 0);
         }
 
         // Executar instrução
@@ -65,14 +65,7 @@ void proxima_acao(Simulador* sim) {
     }
     else {
         // Se não há mais instruções, termina o processo
-        terminar_processo(sim, sim->current_process->pid);
-        sim->current_process = NULL;
-        return;
-    }
-
-    // Verifica se o processo terminou
-    if (sim->current_process && sim->current_process->instruction_index >= sim->current_process->instruction_count) {
-        terminar_processo(sim, sim->current_process->pid);
+        terminar_processo(sim, sim->current_process);
         sim->current_process = NULL;
         return;
     }
@@ -155,12 +148,6 @@ Simulador create_simulator(const SimulationConfig config) {
 void destroy_simulator(Simulador* sim) {
     if (!sim) return;
 
-    // Destrói TLB
-    destroy_tlb(&sim->main_memory_ctx, sim->tlb);
-
-    // Destrói fila de processos
-    process_queue_destroy(sim->process_queue);
-
     // Destroi processos na memória principal
     PROCESS_HASHMAP_FOREACH(sim->process_map_main, entry) {
         terminar_processo(sim, entry->value);
@@ -169,6 +156,12 @@ void destroy_simulator(Simulador* sim) {
     PROCESS_HASHMAP_FOREACH(sim->process_map_secondary, entry) {
         terminar_processo(sim, entry->value);
     }
+
+    // Destrói TLB
+    destroy_tlb(&sim->main_memory_ctx, sim->tlb);
+
+    // Destrói fila de processos
+    process_queue_destroy(sim->process_queue);
 
     // Destrói mapas de processos
     process_hashmap_destroy(sim->process_map_main);

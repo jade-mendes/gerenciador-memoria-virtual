@@ -6,6 +6,7 @@
 
 #include "process.h"
 
+#include <stdio.h>
 #include <string.h>
 
 #include "Simulador.h"
@@ -82,6 +83,8 @@ Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruct
 
 // Função para terminar um processo
 void terminar_processo(Simulador* sim, Process* process) {
+    if (!process) return;
+
     destroy_page_table(&sim->main_memory_ctx, process->page_table);
     hashmap_destroy(process->variables_adrr); // Função hipotética
     process_queue_remove(sim->process_queue, process); // Remove da fila de prontos
@@ -90,14 +93,13 @@ void terminar_processo(Simulador* sim, Process* process) {
         // Se o processo estava suspenso, remove da memória secundária
         process_hashmap_remove(sim->process_map_secondary, process->pid);
         nalloc_free(&sim->secondary_memory_ctx, process->instructions);
+        nalloc_free(&sim->secondary_memory_ctx, process);
     } else {
         // Se o processo estava na memória principal, remove do mapa de processos principal
         process_hashmap_remove(sim->process_map_main, process->pid);
         nalloc_free(&sim->main_memory_ctx, process->instructions);
+        nalloc_free(&sim->main_memory_ctx, process);
     }
-
-    // Libera a memória do processo
-    nalloc_free(&sim->main_memory_ctx, process);
 }
 
 // Função para desuspender um processo
@@ -126,11 +128,8 @@ void desuspender_processo(const Simulador* sim, uint32_t pid) {
     nalloc_free(&sim->secondary_memory_ctx, process);
 }
 
-// Função para bloquear um processo
-void bloquear_processo(Simulador* sim, uint32_t pid, BlockReason reason, uint32_t info) {
-    // Só pode bloquear o processo atualmente em execução
-    if (!sim->current_process || sim->current_process->pid != pid) return;
-
+// Função para bloquear o processo atual
+void bloquear_processo_atual(Simulador* sim, const BlockReason reason, const uint32_t info) {
     // Atualiza estado
     sim->current_process->state = PROCESS_BLOCKED;
 

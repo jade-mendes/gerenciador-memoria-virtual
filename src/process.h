@@ -51,7 +51,7 @@ typedef struct Process {
 Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruction* instructions, uint32_t instruction_count, char* texts, int text_size);
 void terminar_processo(Simulador* sim, Process* process);
 
-void bloquear_processo(Simulador* sim, uint32_t pid, BlockReason reason, uint32_t info);
+void bloquear_processo_atual(Simulador* sim, const BlockReason reason, const uint32_t info);
 
 #define PROCESS_H
 
