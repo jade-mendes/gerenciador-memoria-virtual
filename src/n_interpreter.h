@@ -18,7 +18,8 @@ extern char process_output[MAX_MSG_SIZE];
 extern char process_error[MAX_MSG_SIZE];
 
 
-
+// Cria um novo processo, o nome é dentro da pasta src/processos [não escrever o ".bin" do nome]
+void inst_create(char *process_name, const size_t pid);
 void execute(const size_t index, const size_t pid, Instruction *instructions);
 
 

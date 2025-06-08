@@ -6,12 +6,12 @@
 
 #include "web_server.h"
 
-// int main() {
-//     printf("\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
-//            "Bem-vindo ao Simulador de Memória Virtual!\n"
-//            "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n");
+int main() {
+    printf("\n-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n"
+           "Bem-vindo ao Simulador de Memória Virtual!\n"
+           "-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-\n");
 
-//     start_web_server();
+    start_web_server();
 
-//     return 0;
-// }
+    return 0;
+}

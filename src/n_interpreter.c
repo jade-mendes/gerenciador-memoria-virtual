@@ -326,7 +326,7 @@ void inst_create(char *process_name, const size_t pid) {
     char file_name[100];
     snprintf(file_name, sizeof(file_name), "./process/%s.bin", process_name);
 
-    get_instructions(process_name, &instructions, &instruction_count, &text_out, &text_size);
+    get_instructions(file_name, &instructions, &instruction_count, &text_out, &text_size);
 
     criar_processo(simulador, rand(), process_name, instructions, instruction_count, text_out, text_size);
 
@@ -534,42 +534,29 @@ void inst_input_s(const char *var_name, int size, const size_t pid) {
 
 // Testes ======================================================
 
-int main() {
-    size_t len;
-    char filename[] = "test"; // Nome do arquivo de teste
-
-    // Configuração básica do simulador
-    SimulationConfig config = {
-        .PAGE_SIZE = 8,
-        .MP_SIZE = 1024 * 16,
-        .MS_SIZE = 1024 * 1024 * 16, // 16 MB
-        .TLB_SIZE = 16,
-        .TIME_SLICE = 10,
-        .SUB_POLICY_TYPE = SUB_POLICY_LRU,
-        .BITS_LOGICAL_ADDRESS = 20,
-    };
-    strcpy(config.FILE_NAME, filename);
-
-    // Inicializar simulador
-    Simulador* sim = create_simulator(config);
-    simulador = sim;
-
-    // Ler instruções do arquivo
-    Instruction *instructions;
-    size_t instruction_count;
-    char *text_out;
-    int text_size;
-
-    get_instructions(filename, &instructions, &instruction_count, &text_out, &text_size);
-
-    // Criar processo principal
-    criar_processo(simulador, 1, "main", instructions, instruction_count, text_out, text_size);
-
-    // Loop de execução
-    while (proxima_acao(simulador)) {}
-
-    // Limpeza final
-    destroy_simulator(simulador);
-
-    return 0;
-}
+// int main() {
+//     // Configuração básica do simulador
+//     SimulationConfig config = {
+//         .PAGE_SIZE = 8,
+//         .MP_SIZE = 1024 * 16,
+//         .MS_SIZE = 1024 * 1024 * 16, // 16 MB
+//         .TLB_SIZE = 16,
+//         .TIME_SLICE = 10,
+//         .SUB_POLICY_TYPE = SUB_POLICY_LRU,
+//         .BITS_LOGICAL_ADDRESS = 20,
+//     };
+//
+//     // Inicializar simulador
+//     Simulador* sim = create_simulator(config);
+//     simulador = sim;
+//
+//     inst_create("boot", 0);
+//
+//     // Loop de execução
+//     while (proxima_acao(simulador)) {}
+//
+//     // Limpeza final
+//     destroy_simulator(simulador);
+//
+//     return 0;
+// }

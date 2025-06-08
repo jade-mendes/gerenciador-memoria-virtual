@@ -3,51 +3,84 @@
 //
 
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 
-typedef struct {
-    int PAGE_SIZE;
-    char PAGE_SIZE_DIM[4];
-    int MP_SIZE;
-    char MP_SIZE_DIM[4];
-    int MS_SIZE;
-    char MS_SIZE_DIM[4];
-    int TLB_SIZE;
-    int BITS_LOGICAL_ADDRESS;
-    int SUB_POLICY_TYPE;
-    char FILE_NAME[100];
-} SimulationConfig;
+#include "n_interpreter.h"
+#include "web_server.h"
+#include "Simulador.h"
 
 void print_config(SimulationConfig config) {
-    printf("=== Configuração da Simulação ===\n");
-    printf("Tamanho da Página: %d%s\n", config.PAGE_SIZE, config.PAGE_SIZE_DIM);
-    printf("Tamanho da Memória Principal: %d%s\n", config.MP_SIZE, config.MP_SIZE_DIM);
-    printf("Tamanho da Memória Secundária: %d%s\n", config.MS_SIZE, config.MS_SIZE_DIM);
+    printf("\n=== Configuração da Simulação ===\n");
+    printf("Tamanho da Página: %d\n", config.PAGE_SIZE);
+    printf("Tamanho da Memória Principal: %d\n", config.MP_SIZE);
+    printf("Tamanho da Memória Secundária: %d\n", config.MS_SIZE);
     printf("Linhas da TLB: %d\n", config.TLB_SIZE);
     printf("Bits de Endereço Lógico: %d\n", config.BITS_LOGICAL_ADDRESS);
-    printf("Política de Substituição: %s\n", config.SUB_POLICY_TYPE);
-    printf("Arquivo de leitura: %s\n", config.FILE_NAME);
+    printf("Política de Substituição: %s\n", config.SUB_POLICY_TYPE == SUB_POLICY_LRU ? "LRU" : "CLOCK");
     printf("=================================\n");
 }
 
 void parse_json_config(const char* json, SimulationConfig* config) {
-    // Extrai os valores do JSON
+    char policy[10];
+
     sscanf(json,
-        "{\"PAGE_SIZE\":%d,\"PAGE_SIZE_DIM\":%s,\"MP_SIZE\":%d,\"MP_SIZE_DIM\":%s,\"MS_SIZE\":%d,\"MS_SIZE_DIM\":%s,\"BITS_LOGICAL_ADDRESS\":%d,\"TLB_SIZE\":%d,\"SUB_POLICY_TYPE\":%s,\"FILE_NAME\":%s\"}",
+        "{\"PAGE_SIZE\":%u,\"MP_SIZE\":%u,\"MS_SIZE\":%u,\"TLB_SIZE\":%u,\"BITS_LOGICAL_ADDRESS\":%u,\"SUB_POLICY_TYPE\":\"%5[^\"]\"}",
         &config->PAGE_SIZE,
-        config->PAGE_SIZE_DIM,
         &config->MP_SIZE,
-        config->MP_SIZE_DIM,
         &config->MS_SIZE,
-        config->MS_SIZE_DIM,
         &config->TLB_SIZE,
         &config->BITS_LOGICAL_ADDRESS,
-        &config->SUB_POLICY_TYPE,
-        config->FILE_NAME
+        policy
     );
+
+    if (strcmp(policy, "LRU") == 0) {
+        config->SUB_POLICY_TYPE = SUB_POLICY_LRU;
+    } else if (strcmp(policy, "CLOCK") == 0) {
+        config->SUB_POLICY_TYPE = SUB_POLICY_CLOCK;
+    }
 }
 
-void start_simulation_button(char* json) {
+void start_simulation_button(char* json, int client_socket) {
     SimulationConfig config;
     parse_json_config(json, &config);
+
+    if (simulador) {
+        printf("\nReiniciando simulação com nova configuração...\n");
+        destroy_simulator(simulador);
+    }
+    simulador = create_simulator(config);
     print_config(config);
+
+    inst_create("boot", 0);
+
+    send_json(client_socket, "{\"status\": \"Simulação iniciada\"}");
+}
+
+void web_next_cycle(char* json, int client_socket) {
+    if (!simulador) {
+        write(client_socket, "HTTP/1.1 400 Bad Request", 24);
+        return;
+    }
+
+    proxima_acao(simulador);
+
+    char* json_response = generate_simulator_json(simulador);
+    send_json(client_socket, json_response);
+    free(json_response);
+}
+
+void web_set_user_input(char* json, int client_socket) {
+    if (!simulador) {
+        write(client_socket, "HTTP/1.1 400 Bad Request", 24);
+        return;
+    }
+
+    // Extrai a entrada do JSON
+    sscanf(json, "{\"input\": \"%[^\"]\"}", process_input);
+
+    printf("Entrada do usuário: %s\n", process_input);
+
+    write(client_socket, "HTTP/1.1 200 OK", 15);
 }

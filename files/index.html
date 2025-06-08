@@ -75,19 +75,16 @@
         </div>
 
         <label for="BITS_LOGICAL_ADDRESS">Bits de Endereço Lógico:</label>
-        <input type="text" name="BITS_LOGICAL_ADDRESS" placeholder="16">
+        <input type="text" name="BITS_LOGICAL_ADDRESS" placeholder="16" id="BITS_LOGICAL_ADDRESS">
 
         <label for="TLB_SIZE">Linhas da TLB:</label>
-        <input type="text" name="TLB_SIZE" placeholder="16">
+        <input type="text" name="TLB_SIZE" placeholder="16" id="TLB_SIZE">
 
         <label for="SUB_POLICY_TYPE">Política de Substituição:</label>
         <select id="SUB_POLICY_TYPE" name="policy">
             <option value="LRU" selected>LRU</option>
             <option value="relogio">Relógio</option>
         </select>
-
-        <label for="FILE_NAME">Nome do arquivo:</label>
-        <input type="text" placeholder="data.txt" name="FILE_NAME" maxlength="100">
 
         <button type="submit">Iniciar Simulação</button>
     </form>

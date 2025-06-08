@@ -29,7 +29,6 @@ typedef struct {
     uint32_t TIME_SLICE;
     uint32_t BITS_LOGICAL_ADDRESS;
     SubPolicyType SUB_POLICY_TYPE;
-    char FILE_NAME[100];
 } SimulationConfig;
 
 

@@ -273,10 +273,13 @@ char* generate_simulator_json(Simulador* sim) {
         "{\n"
         "\"cycle\": %u,\n"
         "\"main-memory_usage\": %f,\n"
-        "\"secondary-memory_usage\": %f,\n",
+        "\"secondary-memory_usage\": %f,\n"
+        "\"last_msg\": \"%s\",\n",
         sim->current_cycle,
         (float) nalloc_allocated_size(&sim->main_memory_ctx) / sim->main_memory_ctx.total_size,
-        (float) nalloc_allocated_size(&sim->secondary_memory_ctx) / sim->secondary_memory_ctx.total_size);
+        (float) nalloc_allocated_size(&sim->secondary_memory_ctx) / sim->secondary_memory_ctx.total_size,
+        process_error[0] == '\0' ? process_output : process_error
+    );
     sb_append(&sb, buffer);
 
     // Fila de processos if not empty
@@ -343,10 +346,12 @@ char* generate_simulator_json(Simulador* sim) {
 
                     uint32_t virt_addr = i * sim->config.PAGE_SIZE;
                     uint32_t phys_addr = (uint32_t)(entry->frame) * sim->config.PAGE_SIZE;
+                    const char* dirty = entry->dirty ? "Sim" : "Não";
+                    const char* referenced = entry->referenced ? "Sim" : "Não";
 
                     snprintf(buffer, sizeof(buffer),
-                        "      {\"virtual\": \"0x%04x\", \"real\": \"0x%04x\"}",
-                        virt_addr, phys_addr);
+                        "      {\"virtual\": \"0x%04x\", \"real\": \"0x%04x\", \"dirty\": \"%s\", \"referenced\": \"%s\"}",
+                        virt_addr, phys_addr, dirty, referenced);
                     sb_append(&sb, buffer);
                 }
             }
@@ -382,10 +387,12 @@ char* generate_simulator_json(Simulador* sim) {
 
                     uint32_t virt_addr = i * sim->config.PAGE_SIZE;
                     uint32_t phys_addr = (uint32_t)(entry->frame) * sim->config.PAGE_SIZE;
+                    const char* dirty = entry->dirty ? "Sim" : "Não";
+                    const char* referenced = entry->referenced ? "Sim" : "Não";
 
                     snprintf(buffer, sizeof(buffer),
-                        "      {\"virtual\": \"0x%04x\", \"real\": \"0x%04x\"}",
-                        virt_addr, phys_addr);
+                        "      {\"virtual\": \"0x%04x\", \"real\": \"0x%04x\", \"dirty\": \"%s\", \"referenced\": \"%s\"}",
+                        virt_addr, phys_addr, dirty, referenced);
                     sb_append(&sb, buffer);
                 }
             }

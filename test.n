@@ -1,19 +1,14 @@
 // Muitos olá
 
 cont = mmap(0x1000, 4);
-nome = mmap(0x100c, 20);
 
-&vezes = "Quantos vezes são?";
-&hello = "Olá, !";
-&qual = "Qual é o seu nome?";
+&vezes = "Quantos vezes processos criar?";
 
 print_s(vezes);
 input_n(cont);
-print_s(qual);
-input_s(nome, 20);
 
 label(loop1);
     cont = cont - 1;
-    print_s(hello);
+    Create(test);
     print_s(nome);
     jump_gt(loop1, cont, 0);
