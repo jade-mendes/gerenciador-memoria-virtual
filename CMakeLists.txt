@@ -29,4 +29,6 @@ add_executable(gerenciador_memoria_virtual
         src/ProcessQueue.c
         src/Simulador.c
         src/n.c
+        src/tabelas.h
+        src/tabelas.c
 )

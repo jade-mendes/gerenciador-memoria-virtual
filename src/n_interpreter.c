@@ -12,6 +12,7 @@
 #include "n.h"
 #include "Simulador.h"
 #include "process.h"
+#include "tabelas.h"
 
 void inst_create(char *process_name, const size_t pid);
 void inst_terminate(const size_t pid);
@@ -197,7 +198,7 @@ void read_variable_to_buffer(Process* p, const char* var_name, char* buffer, siz
     if (!hashmap_get(p->variables_adrr, key, &addr)) {
         if (!allocate_variable(p, key)) {
             snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s", var_name);
-            return 0;
+            return;
         }
         hashmap_get(p->variables_adrr, key, &addr);
     }
@@ -228,7 +229,7 @@ void read_variable_to_string(Process* p, const char* var_name, char* str) {
     if (!hashmap_get(p->variables_adrr, key, &addr)) {
         if (!allocate_variable(p, key)) {
             snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s", var_name);
-            return 0;
+            return;
         }
         hashmap_get(p->variables_adrr, key, &addr);
     }

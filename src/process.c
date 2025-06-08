@@ -9,7 +9,7 @@
 #include <string.h>
 
 #include "Simulador.h"
-
+#include "tabelas.h"
 
 
 // Função para criar um novo processo
