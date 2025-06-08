@@ -21,6 +21,12 @@ typedef enum {
     PROCESS_BLOCKED,
 } ProcessState;
 
+typedef enum {
+    IO,
+    MEMORY,
+    UNKNOWN_REASON
+} BlockReason;
+
 
 typedef struct Process {
     uint32_t pid;
@@ -35,17 +41,17 @@ typedef struct Process {
     uint32_t instruction_count;
 
     uint32_t time_slice_remaining;
+
+    BlockReason blocked_reason;
+    uint32_t blocked_reason_info;
 } Process;
 
 
 // Funções de gerenciamento de processos
 Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruction* instructions, uint32_t instruction_count, char* texts, int text_size);
-void destroy_process(Process* process, const NallocContext* nalloc_ctx);
-void terminar_processo(Simulador* sim, uint32_t pid);
-void suspender_processo(Simulador* sim, uint32_t pid);
-void desuspender_processo(const Simulador* sim, uint32_t pid);
-void bloquear_processo(Simulador* sim, uint32_t pid);
-void desbloquear_processo(const Simulador* sim, uint32_t pid);
+void terminar_processo(Simulador* sim, Process* process);
+
+void bloquear_processo(Simulador* sim, uint32_t pid, BlockReason reason, uint32_t info);
 
 #define PROCESS_H
 

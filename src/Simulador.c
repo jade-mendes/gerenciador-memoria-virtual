@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "n_interpreter.h"
 #include "tabelas.h"
 
 
@@ -30,25 +31,92 @@ void proxima_acao(Simulador* sim) {
     // Executa próxima instrução
     if (sim->current_process->instruction_index < sim->current_process->instruction_count) {
 
-        // Simula execução da instrução
+        // Preparar para nova instrução
+        process_error[0] = '\0';
+        process_output[0] = '\0';
+
+        // Obter instrução atual
+        Instruction* instructions = sim->current_process->instructions;
+        const size_t current_index = sim->current_process->instruction_index;
+        const Instruction current_inst = instructions[current_index];
+
+        // Mostrar estado atual
+        printf("\n=== Instruction %zu ===", current_index);
+        printf("\nProcesso: %s [%u]", sim->current_process->name, sim->current_process->pid);
+
+        // Solicitar entrada do usuário
+        if ((current_inst.type == INST_INPUT_N || current_inst.type == INST_INPUT_S) && process_input[0] == '\0') {
+            bloquear_processo(sim, sim->current_process->pid, IO, 0);
+        }
+
+        // Executar instrução
+        simulador = sim;
+        execute(current_index, sim->current_process->pid, instructions);
+
+        if (process_error[0] != '\0') {
+            printf("\n\033[31mErro: %s\033[0m", process_error);
+        }
+        else if (process_output[0] != '\0') {
+            printf("\n\033[34m%s\033[0m", process_output);
+        }
 
         sim->current_process->instruction_index++;
         sim->current_process->time_slice_remaining--;
     }
+    else {
+        // Se não há mais instruções, termina o processo
+        terminar_processo(sim, sim->current_process->pid);
+        sim->current_process = NULL;
+        return;
+    }
 
     // Verifica se o processo terminou
-    if (sim->current_process->instruction_index >= sim->current_process->instruction_count) {
+    if (sim->current_process && sim->current_process->instruction_index >= sim->current_process->instruction_count) {
         terminar_processo(sim, sim->current_process->pid);
         sim->current_process = NULL;
         return;
     }
 
     // Verifica fim do time slice
-    if (sim->current_process->time_slice_remaining <= 0) {
+    if (sim->current_process && sim->current_process->time_slice_remaining <= 0) {
         sim->current_process->state = PROCESS_READY;
         process_queue_enqueue(sim->process_queue, sim->current_process);
         sim->current_process = NULL;
     }
+
+    // verificar se tem coisa para desbloquear
+    PROCESS_HASHMAP_FOREACH(sim->process_map_main, process) {
+        if (process->value->state == PROCESS_BLOCKED && process->value->blocked_reason == IO) {
+            // Desbloqueia o processo se houver entrada do usuário
+            if (process_input[0] != '\0') {
+                process->value->state = PROCESS_READY;
+                process_queue_enqueue(sim->process_queue, process->value);
+                process_input[0] = '\0'; // Limpa a entrada após desbloquear
+
+                printf("\nProcesso %s [%u] desbloqueado por IO", process->value->name, process->value->pid);
+            }
+        }
+        else if (process->value->state == PROCESS_BLOCKED && process->value->blocked_reason == UNKNOWN_REASON) {
+            if (rand() % 4 == 0) {
+                // Simula desbloqueio aleatório
+                process->value->state = PROCESS_READY;
+                process_queue_enqueue(sim->process_queue, process->value);
+
+                printf("\nProcesso %s [%u] desbloqueado aleatoriamente", process->value->name, process->value->pid);
+            }
+        }
+    }
+
+    // Verifica se há processos suspensos para desuspender
+    PROCESS_HASHMAP_FOREACH_SAFE(sim->process_map_secondary, entry_var, next_var) {
+        if (entry_var->value->state == PROCESS_SUSPENDED) {
+            // Desuspende o processo
+            desuspender_processo(sim, entry_var->key);
+            printf("\nProcesso %s [%u] desuspenso", entry_var->value->name, entry_var->value->pid);
+        }
+    }
+
+    sim->current_cycle++;
 }
 
 Simulador create_simulator(const SimulationConfig config) {
@@ -95,11 +163,11 @@ void destroy_simulator(Simulador* sim) {
 
     // Destroi processos na memória principal
     PROCESS_HASHMAP_FOREACH(sim->process_map_main, entry) {
-        destroy_process(entry->value, &sim->main_memory_ctx);
+        terminar_processo(sim, entry->value);
     }
     // Destroi processos na memória secundária
     PROCESS_HASHMAP_FOREACH(sim->process_map_secondary, entry) {
-        destroy_process(entry->value, &sim->secondary_memory_ctx);
+        terminar_processo(sim, entry->value);
     }
 
     // Destrói mapas de processos

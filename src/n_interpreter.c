@@ -3,6 +3,8 @@
 //
 
 
+#include "n_interpreter.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -150,13 +152,12 @@ void execute(const size_t index, const size_t pid, Instruction *instructions) {
 
 // ------------------- ============================== -------------------
 
-#define MAX_MSG_SIZE 256
 char process_input[MAX_MSG_SIZE]  =  {0};
 char process_output[MAX_MSG_SIZE] =  {0};
 char process_error[MAX_MSG_SIZE]  =  {0};
 
 // Função auxiliar para alocar variáveis
-bool allocate_variable(Process* p, const char* var_name) {
+bool allocate_variable(const Process* p, const char* var_name) {
     return hashmap_put(p->variables_adrr, var_name, 0);
 }
 
@@ -325,6 +326,9 @@ void inst_create(char *process_name, const size_t pid) {
     get_instructions(process_name, &instructions, &instruction_count, &text_out, &text_size);
 
     criar_processo(simulador, rand(), process_name, instructions, instruction_count, text_out, text_size);
+
+    free(instructions);
+    free(text_out);
 }
 
 void inst_terminate(const size_t pid) {
@@ -506,6 +510,8 @@ void inst_input_n(const char *var_name, const size_t pid) {
     }
     snprintf(process_output, MAX_MSG_SIZE, "Lendo inteiro: %d", value);
     write_variable(p, var_name, (uint32_t)value);
+
+    process_input [0] = '\0';
 }
 
 void inst_input_s(const char *var_name, int size, const size_t pid) {
@@ -519,21 +525,13 @@ void inst_input_s(const char *var_name, int size, const size_t pid) {
     buffer[size - 1] = '\0'; // Garantir que a string esteja terminada
     snprintf(process_output, MAX_MSG_SIZE, "Lendo string: \"%s\"", buffer);
     write_variable_buffer(p, var_name, buffer, size);
+
+    process_input[0] = '\0';
 }
 
 // Testes ======================================================
 
 int main() {
-    // Solicitar nome do arquivo
-    // char filename[100];
-    // printf("Digite o nome do arquivo de instrucoes: ");
-    // fgets(filename, sizeof(filename), stdin);
-    // // Remover newline
-    // size_t len = strlen(filename);
-    // if (len > 0 && filename[len-1] == '\n') {
-    //     filename[len-1] = '\0';
-    // }
-
     size_t len;
     char filename[] = "test"; // Nome do arquivo de teste
 

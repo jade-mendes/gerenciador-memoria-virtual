@@ -45,6 +45,8 @@ typedef struct Simulador {
     NallocContext secondary_memory_ctx;
 
     TLB* tlb;
+
+    uint32_t current_cycle;
 } Simulador;
 
 extern Simulador* simulador;
