@@ -190,6 +190,68 @@ uint32_t read_variable(Process* p, const char* var_name) {
     return value;
 }
 
+void read_variable_to_buffer(Process* p, const char* var_name, char* buffer, size_t buffer_size) {
+    const char* key = var_name[0] == '&' ? var_name + 1 : var_name;
+    uint32_t addr;
+
+    if (!hashmap_get(p->variables_adrr, key, &addr)) {
+        if (!allocate_variable(p, key)) {
+            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s", var_name);
+            return 0;
+        }
+        hashmap_get(p->variables_adrr, key, &addr);
+    }
+
+    if (var_name[0] == '&') {
+        perror("Erro: Não é possível ler o endereço de uma variável");
+    }
+
+    for (int i = 0; i < buffer_size - 1; i++) {
+        int status;
+        uint8_t byte = get_mem(simulador, p, addr + i, &status);
+        if (status != MEM_ACCESS_OK) {
+            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s",
+                     addr + i, ADDR_STATUS(status));
+            return;
+        }
+        buffer[i] = byte;
+        if (byte == '\0') {
+            break; // String terminada
+        }
+    }
+}
+
+void read_variable_to_string(Process* p, const char* var_name, char* str) {
+    const char* key = var_name[0] == '&' ? var_name + 1 : var_name;
+    uint32_t addr;
+
+    if (!hashmap_get(p->variables_adrr, key, &addr)) {
+        if (!allocate_variable(p, key)) {
+            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s", var_name);
+            return 0;
+        }
+        hashmap_get(p->variables_adrr, key, &addr);
+    }
+
+    if (var_name[0] == '&') {
+        perror("Erro: Não é possível ler o endereço de uma variável");
+    }
+
+    uint8_t byte;
+    uint32_t i = 0;
+    do {
+        int status;
+        byte = get_mem(simulador, p, addr + i, &status);
+        if (status != MEM_ACCESS_OK) {
+            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s",
+                     addr + i, ADDR_STATUS(status));
+            return;
+        }
+        str[i] = byte;
+        i++;
+    } while (byte);
+}
+
 // Função auxiliar para escrever variáveis
 void write_variable(Process* p, const char* var_name, uint32_t value) {
     const char* key = (var_name[0] == '&') ? var_name + 1 : var_name;
@@ -203,12 +265,45 @@ void write_variable(Process* p, const char* var_name, uint32_t value) {
         hashmap_get(p->variables_adrr, key, &addr);
     }
 
+    if (var_name[0] == '&') {
+        hashmap_put(p->variables_adrr, key, value);
+        return; // Se for um endereço, não escreve na memória
+    }
+
     for (int i = 0; i < 4; i++) {
         uint8_t byte = (value >> (8 * i)) & 0xFF;
         int status;
         set_mem(simulador, p, addr + i, byte, &status);
         if (status != MEM_ACCESS_OK) {
             snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s",
+                     addr + i, ADDR_STATUS(status));
+            break;
+        }
+    }
+}
+
+void write_variable_buffer(Process* p, const char* var_name, const char* buffer, size_t buffer_size) {
+    const char* key = var_name[0] == '&' ? var_name + 1 : var_name;
+    uint32_t addr;
+
+    if (!hashmap_get(p->variables_adrr, key, &addr)) {
+        if (!allocate_variable(p, key)) {
+            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s", var_name);
+            return;
+        }
+        hashmap_get(p->variables_adrr, key, &addr);
+    }
+
+    if (var_name[0] == '&') {
+        perror("Erro: Não é possível escrever o endereço de uma variável");
+        return;
+    }
+
+    for (size_t i = 0; i < buffer_size; i++) {
+        int status;
+        set_mem(simulador, p, addr + i, buffer[i], &status);
+        if (status != MEM_ACCESS_OK) {
+            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%lu: %s",
                      addr + i, ADDR_STATUS(status));
             break;
         }
@@ -278,18 +373,8 @@ void inst_print_p(const char *var_name, const size_t pid) {
 void inst_print_s(const char *var_name, const size_t pid) {
     Process* p = simulador->current_process;
     char str[MAX_MSG_SIZE] = {0};
-    size_t len = 0;
 
-    char byte = (char) read_variable(p, var_name);
-    while (byte) {
-        str[len] = byte;
-        str[len + 1] = '\0'; // Garante que a string esteja terminada
-        if (len >= MAX_MSG_SIZE - 1) {
-            snprintf(process_error, MAX_MSG_SIZE, "String muito longa para imprimir");
-            return;
-        }
-        byte = (char) read_variable(p, var_name + strlen(str));
-    }
+    read_variable_to_string(p, var_name, str);
 
     if (process_error[0] == '\0') { // Se não houve erro
         snprintf(process_output, MAX_MSG_SIZE, "Printing string: [\"%s\"]", str);
@@ -308,7 +393,7 @@ void inst_assign(const char *var1, const char *var2, const size_t pid) {
 void inst_assign_var_num(const char *var1, int num, const size_t pid) {
     Process* p = simulador->current_process;
     snprintf(process_output, MAX_MSG_SIZE, "Atribuindo %s = %d", var1, num);
-    write_variable(p, var1, (uint32_t)num);
+    write_variable(p, var1, (uint32_t) num);
 }
 
 void inst_assign_add_num(const char *var1, const char *var2, int num, const size_t pid) {
@@ -424,23 +509,15 @@ void inst_input_n(const char *var_name, const size_t pid) {
 
 void inst_input_s(const char *var_name, int size, const size_t pid) {
     Process* p = simulador->current_process;
-    const uint32_t addr = read_variable(p, var_name);
-
-    // Garante que não ultrapasse o tamanho máximo
-    size = (size > MAX_MSG_SIZE) ? MAX_MSG_SIZE : size;
-
-    snprintf(process_output, MAX_MSG_SIZE, "Lendo string: %.*s", size, process_input);
-
-    for (int i = 0; i < size; i++) {
-        int status;
-        set_mem(simulador, p, addr + i, process_input[i], &status);
-        if (status != MEM_ACCESS_OK) {
-            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s",
-                     addr + i, ADDR_STATUS(status));
-            break;
-        }
-        if (process_input[i] == '\0') break;
+    if (size <= 0 || size > MAX_MSG_SIZE - 1) {
+        snprintf(process_error, MAX_MSG_SIZE, "Erro: tamanho invalido para string");
+        return;
     }
+    char buffer[MAX_MSG_SIZE] = {0};
+    strncpy(buffer, process_input, size);
+    buffer[size - 1] = '\0'; // Garantir que a string esteja terminada
+    snprintf(process_output, MAX_MSG_SIZE, "Lendo string: \"%s\"", buffer);
+    write_variable_buffer(p, var_name, buffer, size);
 }
 
 // Testes ======================================================
@@ -500,7 +577,7 @@ int main() {
         Instruction current_inst = instructions[current_index];
 
         // Mostrar estado atual
-        printf("\n=== Instrucao %zu ===", current_index);
+        printf("\n=== Instruction %zu ===", current_index);
         printf("\nProcesso: %s [%u]",
                simulador->current_process->name,
                simulador->current_process->pid);
@@ -526,14 +603,11 @@ int main() {
             printf("\n\033[34m%s\033[0m", process_output);
         }
 
-        printf("\nVariables: \n");
-        print_hashmap(simulador->current_process->variables_adrr);
-        printf("\n");
+        // printf("\nVariables: \n");
+        // print_hashmap(simulador->current_process->variables_adrr);
+        // printf("\n");
 
-        // Avançar para próxima instrução (a menos que jump tenha modificado)
-        if (simulador->current_process->instruction_index == current_index) {
-            simulador->current_process->instruction_index++;
-        }
+        simulador->current_process->instruction_index++;
     }
 
     // Limpeza final

@@ -39,24 +39,21 @@ Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruct
     process_queue_enqueue(sim->process_queue, new_process);
 
     // texts
-    for (int i = 0; i < text_size / sim->config.PAGE_SIZE; i++) {
+    const int num_pages = (text_size + sim->config.PAGE_SIZE - 1) / sim->config.PAGE_SIZE;
+    for (int i = 0; i < num_pages; i++) {
         uintptr_t virt_addr = i * sim->config.PAGE_SIZE;
         if (!allocate_page(sim, new_process, virt_addr)) {
-            // Se falhar na alocação de página, libera o processo e retorna NULL
             destroy_process(new_process, &sim->main_memory_ctx);
             return NULL;
         }
-        // Copia o texto para a memória virtual do processo
         for (int j = 0; j < sim->config.PAGE_SIZE && (i * sim->config.PAGE_SIZE + j) < text_size; j++) {
             int status = 0;
             set_mem(sim, new_process, virt_addr + j, texts[i * sim->config.PAGE_SIZE + j], &status);
             if (status != MEM_ACCESS_OK) {
-                // Se falhar ao definir a memória, libera o processo e retorna NULL
                 destroy_process(new_process, &sim->main_memory_ctx);
                 return NULL;
             }
         }
-
     }
 
     return new_process;
