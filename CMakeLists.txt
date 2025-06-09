@@ -29,4 +29,6 @@ add_executable(gerenciador_memoria_virtual
         src/n.c
         src/tabelas.h
         src/tabelas.c
+        src/StringBuilder.h
+        src/StringBuilder.c
 )

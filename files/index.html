@@ -13,72 +13,39 @@
 
         <label for="pageSize">Tamanho da Página:</label>
         <div>
-            <input type="text" name="PAGE_SIZE" placeholder="16">
+            <input type="text" name="PAGE_SIZE" placeholder="16" value="16">
             <select id="pageSize" name="PAGE_SIZE_DIM">
                 <option value="B">byte</option>
-                <option value="b">bits</option>
-                <option value="Mb">megabits</option>
-                <option value="Gb">gigabits</option>
-                <option value="Tb">terabits</option>
+                <option value="KB">kilobyte</option>
                 <option value="MB">megabyte</option>
-                <option value="GB">gigabyte</option>
-                <option value="TB">terabyte</option>
-                <option value="Mib">mebibits</option>
-                <option value="Gib">gibibits</option>
-                <option value="Tib">tebibits</option>
-                <option value="MiB">mebibyte</option>
-                <option value="GiB">gibibyte</option>
-                <option value="TiB">tebibyte</option>
             </select>
         </div>
 
         <label for="mpSize">Tamanho da Memória Principal:</label>
         <div>
-            <input type="text" name="MP_SIZE" placeholder="64">
+            <input type="text" name="MP_SIZE" placeholder="1" value="1">
             <select id="mpSize" name="MP_SIZE_DIM">
                 <option value="B">byte</option>
-                <option value="b">bits</option>
-                <option value="Mb">megabits</option>
-                <option value="Gb">gigabits</option>
-                <option value="Tb">terabits</option>
-                <option value="MB">megabyte</option>
-                <option value="GB">gigabyte</option>
-                <option value="TB">terabyte</option>
-                <option value="Mib">mebibits</option>
-                <option value="Gib">gibibits</option>
-                <option value="Tib">tebibits</option>
-                <option value="MiB">mebibyte</option>
-                <option value="GiB">gibibyte</option>
-                <option value="TiB">tebibyte</option>
+                <option value="KB">kilobyte</option>
+                <option value="MB" selected>megabyte</option>
             </select>
         </div>
 
         <label for="msSize">Tamanho da Memória Secundária:</label>
         <div>
-            <input type="text" name="MS_SIZE" placeholder="1024">
+            <input type="text" name="MS_SIZE" placeholder="8" value="8">
             <select id="msSize" name="MS_SIZE_DIM">
                 <option value="B">byte</option>
-                <option value="b">bits</option>
-                <option value="Mb">megabits</option>
-                <option value="Gb">gigabits</option>
-                <option value="Tb">terabits</option>
-                <option value="MB">megabyte</option>
-                <option value="GB">gigabyte</option>
-                <option value="TB">terabyte</option>
-                <option value="Mib">mebibits</option>
-                <option value="Gib">gibibits</option>
-                <option value="Tib">tebibits</option>
-                <option value="MiB">mebibyte</option>
-                <option value="GiB">gibibyte</option>
-                <option value="TiB">tebibyte</option>
+                <option value="KB">kilobyte</option>
+                <option value="MB" selected>megabyte</option>
             </select>
         </div>
 
         <label for="BITS_LOGICAL_ADDRESS">Bits de Endereço Lógico:</label>
-        <input type="text" name="BITS_LOGICAL_ADDRESS" placeholder="16" id="BITS_LOGICAL_ADDRESS">
+        <input type="text" name="BITS_LOGICAL_ADDRESS" id="BITS_LOGICAL_ADDRESS" value="20">
 
         <label for="TLB_SIZE">Linhas da TLB:</label>
-        <input type="text" name="TLB_SIZE" placeholder="16" id="TLB_SIZE">
+        <input type="text" name="TLB_SIZE" id="TLB_SIZE" value="16">
 
         <label for="SUB_POLICY_TYPE">Política de Substituição:</label>
         <select id="SUB_POLICY_TYPE" name="policy">

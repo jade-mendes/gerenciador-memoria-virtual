@@ -321,3 +321,27 @@ body {
     scrollbar-width: thin;
     scrollbar-color: #333 #1e1e1e;
 }
+
+
+
+/* Adicionar estilos para mensagens de erro */
+.message.error {
+    color: #ff4444;
+    font-weight: bold;
+    margin-top: 5px;
+}
+
+/* Estilo para mensagens de status */
+.last-msg {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-grow: 1;
+}
+
+.message {
+    padding: 5px 10px;
+    background: #2a2a2a;
+    border-radius: 4px;
+    font-size: 14px;
+}

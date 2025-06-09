@@ -20,15 +20,25 @@ document.addEventListener("DOMContentLoaded", () => {
     document.querySelector(".input-block input").addEventListener("keypress", (e) => {
         if (e.key === 'Enter') enviarInputUsuario();
     });
+
+    document.getElementById("restart").addEventListener("click", () => {
+        window.location.href = "/";
+    });
 });
 
 function atualizarPagina(data) {
     atualizarFilaDeProcessos(data.process_queue);
-    atualizarProcessoAtual(data.current_process, data.last_msg);
+    atualizarProcessoAtual(data.current_process, data.last_msg, data.last_error);
     atualizarCicloAtual(data.cycle);
     atualizarTLB(data.tlb);
     atualizarListaDeProcessos(data.process_list);
     atualizarMemoria(data['main-memory_usage'], data['secondary-memory_usage']);
+
+    // Atualizar remaining-cycles se houver processo atual
+    if (data.current_process && data.current_process["remaining-cycles"] !== undefined) {
+        document.getElementById("remaining-cycles").textContent =
+            data.current_process["remaining-cycles"];
+    }
 }
 
 function atualizarFilaDeProcessos(fila) {
@@ -45,26 +55,37 @@ function atualizarFilaDeProcessos(fila) {
     });
 }
 
-function atualizarProcessoAtual(proc, mensagem) {
+function atualizarProcessoAtual(proc, mensagem, erro) {
     const container = document.querySelector(".last-msg");
-    let content = '<div class="message"><span class="text">' + mensagem + '</span></div>';
+    let content = '';
 
+    // Exibir processo atual se existir
     if (proc) {
-        content = `
+        content += `
             <div class="process-mini">
                 <img src="${proc.icon}" alt="${proc.name}" class="icon">
                 <div class="process-name">${proc.name}</div>
             </div>
-            ${content}
         `;
     }
+
+    // Exibir mensagem principal
+    if (mensagem) {
+        content += `<div class="message"><span class="text">${mensagem}</span></div>`;
+    }
+
+    // Exibir mensagem de erro se existir
+    if (erro) {
+        content += `<div class="message error"><span class="text">${erro}</span></div>`;
+    }
+
+    document.getElementById("remaining-cycles").textContent = `${proc ? proc["remaining-cycles"] : "N/A"}`;
 
     container.innerHTML = content;
 }
 
 function atualizarCicloAtual(ciclo) {
     document.getElementById("current-cycle").textContent = `Ciclo atual: ${ciclo}`;
-    document.getElementById("remaining-cycles").textContent = `${Math.max(0, 100 - ciclo)}`;
 }
 
 function atualizarTLB(tlb) {

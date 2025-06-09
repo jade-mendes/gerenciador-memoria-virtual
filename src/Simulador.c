@@ -12,6 +12,7 @@
 #include <string.h>
 
 #include "n_interpreter.h"
+#include "StringBuilder.h"
 #include "tabelas.h"
 
 
@@ -232,41 +233,6 @@ Process* get_process_by_pid(Simulador* simulador, uint32_t pid) {
 
 // Make json ==========================================================================================================
 
-// Implementação do StringBuilder para construção eficiente de JSON
-typedef struct {
-    char* data;
-    size_t length;
-    size_t capacity;
-} StringBuilder;
-
-static void sb_init(StringBuilder* sb) {
-    sb->data = NULL;
-    sb->length = 0;
-    sb->capacity = 0;
-}
-
-static void sb_append(StringBuilder* sb, const char* str) {
-    size_t len = strlen(str);
-    if (sb->length + len + 1 > sb->capacity) {
-        size_t new_capacity = sb->capacity == 0 ? 1024 : sb->capacity * 2;
-        while (sb->length + len + 1 > new_capacity) {
-            new_capacity *= 2;
-        }
-        char* new_data = realloc(sb->data, new_capacity);
-        if (!new_data) return;
-        sb->data = new_data;
-        sb->capacity = new_capacity;
-    }
-    memcpy(sb->data + sb->length, str, len);
-    sb->length += len;
-    sb->data[sb->length] = '\0';
-}
-
-static char* sb_finalize(StringBuilder* sb) {
-    char* result = sb->data;
-    sb_init(sb);
-    return result;
-}
 
 // Função auxiliar para converter estado do processo para string
 static const char* process_state_to_str(ProcessState state) {
@@ -290,11 +256,13 @@ char* generate_simulator_json(Simulador* sim) {
         "\"cycle\": %u,\n"
         "\"main-memory_usage\": %f,\n"
         "\"secondary-memory_usage\": %f,\n"
-        "\"last_msg\": \"%s\",\n",
+        "\"last_msg\": \"%s\",\n"
+        "\"last_error\": \"%s\",\n",
         sim->current_cycle,
         (float) nalloc_allocated_size(&sim->main_memory_ctx) / sim->main_memory_ctx.total_size,
         (float) nalloc_allocated_size(&sim->secondary_memory_ctx) / sim->secondary_memory_ctx.total_size,
-        process_error[0] == '\0' ? process_output : process_error
+        process_output,
+        process_error
     );
     sb_append(&sb, buffer);
 
@@ -320,11 +288,11 @@ char* generate_simulator_json(Simulador* sim) {
             "\"current_process\": {\n"
             "  \"name\": \"%s\",\n"
             "  \"icon\": \"icons/%s.png\",\n"
-            "  \"last_msg\": \"%s\"\n"
+            "  \"remaining-cycles\": %u\n"
             "},\n",
             sim->current_process->name,
             sim->current_process->name,
-            process_error[0] == '\0' ? process_output : process_error
+            sim->current_process->time_slice_remaining
         );
     } else {
         snprintf(buffer, sizeof(buffer), "\"current_process\": null,\n");

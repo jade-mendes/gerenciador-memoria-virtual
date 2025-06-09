@@ -7,6 +7,8 @@
 
 
 #ifndef PROCESS_H
+#define PROCESS_H
+
 #include <stdint.h>
 #include "HashMap.h"
 #include "n.h"
@@ -56,6 +58,6 @@ void desbloquear_processo(const Simulador* sim, Process* process);
 
 bool try_swipe(Simulador* sim, Process* process);
 
-#define PROCESS_H
+
 
 #endif //PROCESS_H

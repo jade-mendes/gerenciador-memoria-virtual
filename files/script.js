@@ -5,24 +5,9 @@ document.getElementById('configForm').addEventListener('submit', function (e) {
 
     // Unit conversion factors
     const units = {
-        // Bits
-        'b': 0.125,   // 1 bit = 0.125 bytes
-        'Mb': 125000, // 1 megabit = 125000 bytes
-        'Gb': 1.25e8,
-        'Tb': 1.25e11,
-        // Bytes
         'B': 1,
-        'MB': 1e6,
-        'GB': 1e9,
-        'TB': 1e12,
-        // Binary bits
-        'Mib': 131072, // 1 mebibit = 131072 bytes
-        'Gib': 1.342e8,
-        'Tib': 1.374e11,
-        // Binary bytes
-        'MiB': 1048576,
-        'GiB': 1.074e9,
-        'TiB': 1.1e12
+        'KB': 1024,
+        'MB': 1048576
     };
 
     // Convert values to bytes
