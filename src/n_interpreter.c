@@ -385,7 +385,7 @@ void inst_print_s(const char *var_name, const size_t pid) {
     read_variable_to_string(p, var_name, str);
 
     if (process_error[0] == '\0') { // Se não houve erro
-        snprintf(process_output, MAX_MSG_SIZE, "Printing string: [\"%s\"]", str);
+        snprintf(process_output, MAX_MSG_SIZE, "Printing string: ['%s']", str);
     }
 }
 

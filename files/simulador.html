@@ -23,8 +23,12 @@
     <div class="memory-panel">
         <div class="memory-content">
             <div class="usage-bar">
-                <div class="fill" id="memory-fill" style="height: 75%"></div>
-                <div class="usage-label" id="memory-usage-label">75%</div>
+                <div class="fill" id="memory-fill-main" style="height: 75%"></div>
+                <div class="usage-label" id="memory-usage-label-main">75%</div>
+            </div>
+            <div class="usage-bar">
+                <div class="fill" id="memory-fill-secondary" style="height: 47%"></div>
+                <div class="usage-label" id="memory-usage-label-secondary">47%</div>
             </div>
             <div class="memory-block">
                 <div class="content">
@@ -39,10 +43,24 @@
                 </div>
             </div>
         </div>
+        <div class="input-block">
+            <div class="address-bar">
+                <label>
+                    <input type="text" placeholder="Entrada do IO" id="io-input">
+                </label>
+                <button id="send-io">Enviar</button>
+            </div>
+        </div>
+
         <div class="tbl table-box">
             <table>
                 <thead>
-                <tr><th>Virtual</th><th>Real</th><th>Dirty</th><th>Referenced</th><th>Modified</th></tr>
+                <tr>
+                    <th>Virtual</th>
+                    <th>Real</th>
+                    <th>Last Used</th>
+                    <th>Referenced</th>
+                </tr>
                 </thead>
                 <tbody id="tlb-table"></tbody>
             </table>

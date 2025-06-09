@@ -1,13 +1,10 @@
 // simulador.js
-
 document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("next-cycle").addEventListener("click", async () => {
         try {
             const response = await fetch("/next-cycle", {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({null: null})
             });
             const data = await response.json();
@@ -16,15 +13,22 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Erro ao buscar /next-cycle:", error);
         }
     });
+
+    document.querySelector(".input-block button").addEventListener("click", enviarInputUsuario);
+
+    // Adicionar suporte para Enter no input
+    document.querySelector(".input-block input").addEventListener("keypress", (e) => {
+        if (e.key === 'Enter') enviarInputUsuario();
+    });
 });
 
 function atualizarPagina(data) {
     atualizarFilaDeProcessos(data.process_queue);
-    atualizarProcessoAtual(data.current_process);
+    atualizarProcessoAtual(data.current_process, data.last_msg);
     atualizarCicloAtual(data.cycle);
     atualizarTLB(data.tlb);
     atualizarListaDeProcessos(data.process_list);
-    atualizarMemoria(data.memory_usage);
+    atualizarMemoria(data['main-memory_usage'], data['secondary-memory_usage']);
 }
 
 function atualizarFilaDeProcessos(fila) {
@@ -41,17 +45,21 @@ function atualizarFilaDeProcessos(fila) {
     });
 }
 
-function atualizarProcessoAtual(proc) {
+function atualizarProcessoAtual(proc, mensagem) {
     const container = document.querySelector(".last-msg");
-    container.innerHTML = `
-        <div class="process-mini">
-            <img src="${proc.icon}" alt="${proc.name}" class="icon">
-            <div class="process-name">${proc.name}</div>
-        </div>
-        <div class="message">
-            <span class="text">${proc.last_msg}</span>
-        </div>
-    `;
+    let content = '<div class="message"><span class="text">' + mensagem + '</span></div>';
+
+    if (proc) {
+        content = `
+            <div class="process-mini">
+                <img src="${proc.icon}" alt="${proc.name}" class="icon">
+                <div class="process-name">${proc.name}</div>
+            </div>
+            ${content}
+        `;
+    }
+
+    container.innerHTML = content;
 }
 
 function atualizarCicloAtual(ciclo) {
@@ -60,22 +68,25 @@ function atualizarCicloAtual(ciclo) {
 }
 
 function atualizarTLB(tlb) {
-    const tbl = document.querySelector(".memory-panel .tbl table thead");
-    tbl.innerHTML = `
-        <tr><th>Virtual</th><th>Real</th><th>Dirty</th><th>Referenced</th><th>Modified</th></tr>
-    `;
+    const tbody = document.getElementById("tlb-table");
+    tbody.innerHTML = "";
+
     tlb.forEach(entry => {
         const row = document.createElement("tr");
         row.innerHTML = `
-            <th>${entry.virtual}</th><th>${entry.real}</th><th>${entry.dirty}</th><th>${entry.referenced}</th><th>${entry.modified}</th>
+            <td>${entry.virtual}</td>
+            <td>${entry.real}</td>
+            <td>${entry.last_used}</td>
+            <td>${entry.referenced}</td>
         `;
-        tbl.appendChild(row);
+        tbody.appendChild(row);
     });
 }
 
 function atualizarListaDeProcessos(lista) {
     const container = document.querySelector(".process-panel-list");
     container.innerHTML = "";
+
     lista.forEach(proc => {
         const panel = document.createElement("div");
         panel.className = "process-panel";
@@ -84,9 +95,23 @@ function atualizarListaDeProcessos(lista) {
             <div class="tables">
                 <div class="table-box">
                     <table>
-                        <thead><tr><th>Virtual</th><th>Real</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Virtual</th>
+                                <th>Real</th>
+                                <th>Dirty</th>
+                                <th>Referenced</th>
+                            </tr>
+                        </thead>
                         <tbody>
-                            ${proc.page_table.map(p => `<tr><td>${p.virtual}</td><td>${p.real}</td></tr>`).join("")}
+                            ${proc.page_table.map(p => `
+                                <tr>
+                                    <td>${p.virtual}</td>
+                                    <td>${p.real}</td>
+                                    <td>${p.dirty}</td>
+                                    <td>${p.referenced}</td>
+                                </tr>
+                            `).join("")}
                         </tbody>
                     </table>
                 </div>
@@ -102,9 +127,42 @@ function atualizarListaDeProcessos(lista) {
     });
 }
 
-function atualizarMemoria(uso) {
-    const bar = document.querySelector(".usage-bar .fill");
-    const label = document.querySelector(".usage-bar .usage-label");
-    bar.style.height = `${uso}%`;
-    label.textContent = `${uso}%`;
+function atualizarMemoria(mainUsage, secondaryUsage) {
+    const mainPercent = Math.round(mainUsage * 100);
+    const secondaryPercent = Math.round(secondaryUsage * 100);
+
+    const barMain = document.querySelector("#memory-fill-main");
+    const labelMain = document.querySelector("#memory-usage-label-main");
+    const barSecondary = document.querySelector("#memory-fill-secondary");
+    const labelSecondary = document.querySelector("#memory-usage-label-secondary");
+
+    barMain.style.height = `${mainPercent}%`;
+    labelMain.textContent = `${mainPercent}%`;
+
+    barSecondary.style.height = `${secondaryPercent}%`;
+    labelSecondary.textContent = `${secondaryPercent}%`;
+}
+
+// Nova função para enviar input do usuário
+async function enviarInputUsuario() {
+    const input = document.querySelector(".input-block input");
+    const texto = input.value.trim();
+
+    if (!texto) return;
+
+    try {
+        const response = await fetch("/set-user-input", {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({input: texto})
+        });
+
+        if (response.ok) {
+            input.value = ""; // Limpa o campo após envio bem-sucedido
+        } else {
+            console.error("Erro ao enviar input:", await response.text());
+        }
+    } catch (error) {
+        console.error("Erro ao enviar input:", error);
+    }
 }

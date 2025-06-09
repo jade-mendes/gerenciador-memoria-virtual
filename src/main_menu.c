@@ -34,6 +34,7 @@ void parse_json_config(const char* json, SimulationConfig* config) {
         &config->BITS_LOGICAL_ADDRESS,
         policy
     );
+    config->TIME_SLICE = 10; // Valor padrão, pode ser alterado conforme necessário
 
     if (strcmp(policy, "LRU") == 0) {
         config->SUB_POLICY_TYPE = SUB_POLICY_LRU;
