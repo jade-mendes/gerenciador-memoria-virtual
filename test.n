@@ -2,7 +2,7 @@
 
 cont = mmap(0x1000, 4);
 
-&vezes = "Quantos vezes processos criar?";
+&vezes = "Quantos vezes você quer criar o processo test?";
 
 print_s(vezes);
 input_n(cont);
@@ -10,5 +10,4 @@ input_n(cont);
 label(loop1);
     cont = cont - 1;
     Create(test);
-    print_s(nome);
     jump_gt(loop1, cont, 0);

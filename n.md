@@ -1,188 +1,194 @@
-# Documentação da Linguagem N
+## 📘 Documentação da Linguagem N
 
-A linguagem N é uma linguagem de montagem simples projetada para controlar um simulador de memória virtual. Ela oferece instruções básicas para gerenciamento de processos, alocação de memória, operações aritméticas e controle de fluxo.
+### Índice
 
-## Características Gerais
-- **Sintaxe**: Baseada em instruções simples com parâmetros
-- **Comentários**: Usando `//` para comentários de linha única
-- **Limites**: Todos os nomes (variáveis, processos, labels) têm no máximo 7 caracteres
-- **Tipos de dados**: Suporte a inteiros (32 bits), ponteiros e strings
+1. [Introdução](#introdução)
+2. [Sintaxe Geral](#sintaxe-geral)
+3. [Tipos e Variáveis](#tipos-e-variáveis)
+4. [Operações Aritméticas](#operações-aritméticas)
+5. [Memória Virtual](#memória-virtual)
+6. [Entrada e Saída](#entrada-e-saída)
+7. [Controle de Fluxo](#controle-de-fluxo)
+8. [Processos](#processos)
+9. [Execução e Depuração](#execução-e-depuração)
+10. [Erros Comuns](#erros-comuns)
+11. [Exemplos de Código](#exemplos-de-código)
 
-## Instruções
+---
 
-### 1. Criação de Processos
-`Create(process_name);`  
-Cria um novo processo e o adiciona na fila de pronto.
+### Introdução
 
-Exemplo:
+A linguagem **N** é uma linguagem de baixo nível com sintaxe simples, usada para simular execução de processos com memória virtual. Ela é orientada a instruções diretas e semântica próxima de um assembly de alto nível.
+
+---
+
+### Sintaxe Geral
+
+* Cada instrução termina obrigatoriamente com ponto e vírgula `;`.
+* Uma linha pode conter **apenas uma instrução**.
+* Comentários iniciam com `//`.
+* A linguagem é **case sensitive** (`Create` ≠ `create`).
+* Os nomes de variáveis podem ter até **7 caracteres**.
+
+---
+
+### Tipos e Variáveis
+
+#### Tipos Suportados:
+
+* `int`: Número inteiro de 4 bytes.
+* `string`: Sequência de caracteres (armazenada em memória como bytes).
+
+#### Regras:
+
+* Atribuições declaram variáveis automaticamente.
+* Não há escopo: todas variáveis são globais ao processo.
+* Variáveis são mapeadas a endereços de memória virtual via um **hashmap interno**.
+* Se uma variável for usada antes de ser inicializada, o processo é **terminado imediatamente**.
+
+#### Exemplo:
+
 ```n
-Create(main);
-Create(backgr);
+valor = 42;
+texto = "Oi!";
 ```
 
-### 2. Término de Processos
-`Terminate();`  
-Termina o processo atualmente em execução.
+---
 
-Exemplo:
+### Operações Aritméticas
+
+Suporta apenas os operadores `+` e `-`.
+Cada linha pode conter apenas **uma operação**.
+
 ```n
-Terminate();
+soma = valor + 10;
+texto = texto - 4; // Lê os 4 primeiros bytes de texto como int e subtrai 4
 ```
 
-### 3. Alocação de Memória
-`var = mmap(adrr_like, size);`  
-Aloca uma variável na memória virtual.
+* Não há verificação de tipo: somar `int` com `string` resultará na leitura dos 4 bytes da string como `int`.
+* Não há conversões de tipo explícitas.
+* Não há precedência de operadores (um por linha).
 
-Parâmetros:
-- `adrr_like`: Endereço virtual em hexadecimal (ex: `0x1000`)
-- `size`: Tamanho em bytes
+---
 
-Exemplo:
+### Memória Virtual
+
 ```n
-mem1 = mmap(0x1000, 32);
-mem2 = mmap(0x2000, 64);
+variavel = mmap(endereco, tamanho);
 ```
 
-### 4. Instruções de Impressão
-`print_n(var);`  
-Imprime o conteúdo como inteiro de 32 bits
+* Aloca `tamanho` bytes no endereço virtual especificado.
+* A realocação no mesmo endereço não altera a execução.
+* A linguagem diferencia entre valor e ponteiro:
 
-`print_p(var);`  
-Imprime o endereço (virtual) como ponteiro
-
-`print_s(var);`  
-Imprime o conteúdo como string (terminada em `\0`)
-
-Exemplo:
 ```n
-print_n(mem1);
-print_p(mem2);
-print_s(tmp);
+&tmp = mem1 + 10;   // tmp passa a apontar para mem1 + 10
+tmp = &tmp - 5;     // tmp passa a ter o valor do endereço (tmp - 5)
 ```
 
-### 5. Instruções de Entrada
-`input_n(var);`  
-Lê um número inteiro do usuário e armazena no endereço da variável
+---
 
-`input_s(var, size);`  
-Lê uma string do usuário e armazena no endereço da variável (máximo de `size` bytes)
+### Entrada e Saída
 
-Exemplo:
+#### Entrada:
+
 ```n
-input_n(in1);
-input_s(in2, 12);
+input_n(variavel);        // Lê número inteiro
+input_s(variavel, tam);   // Lê string (até tam bytes)
 ```
 
-### 6. Operações com Variáveis
-`var1 = var2;`  
-Copia o **valor** de var2 para var1
+* `input_s` **sempre exige** o segundo argumento.
+* Se `input_n` falhar ao converter a entrada, o processo é encerrado.
 
-`&var1 = &var2;`  
-Faz var1 **apontar** para o mesmo endereço de var2
+#### Saída:
 
-`var1 = var2 + num;`  
-Soma constante numérica ao **valor** de var2
-
-`&var1 = &var1 + num;`  
-Ajusta o **ponteiro** em bytes (ex: `+4` para próximo inteiro)
-
-`var1 = var2 - num;`  
-Subtrai constante numérica do **valor** de var2
-
-`var1 = var2 + var3;`  
-Soma **valores** de variáveis
-
-`var1 = var2 - var3;`  
-Subtrai **valores** de variáveis
-
-Exemplo:
 ```n
-mem1 = mem2;       // Copia valor
-&mem1 = &mem2;     // Compartilha endereço
-tmp = mem1 + 10;   // Soma valor
-&mem1 = &mem1 + 4; // Ajusta ponteiro
-res = mem1 + mem2;
-dif = mem2 - mem1;
+print_n(var);     // Imprime como número
+print_p(var);     // Imprime valor em formato hexadecimal
+print_p(&var);    // Imprime o endereço apontado
+print_s(var);     // Imprime string
 ```
 
-### 7. Controle de Fluxo
-`label(name);`  
-Define um ponto de salto com o nome especificado
+---
 
-`jump(index);`  
-Salta para a instrução no índice especificado
+### Controle de Fluxo
 
-`jump_eq(index, var, num);`  
-Salta se **valor** de var for igual a num
+Baseado em **labels** e **jumps condicionais**:
 
-`jump_eq(index, var1, var2);`  
-Salta se **valores** de var1 e var2 forem iguais
-
-Exemplo:
 ```n
 label(loop);
-    jump_eq(loop, res, 0);
-label(end);
-    jump_eq(end, dif, dif);
-```
-
-## Regras de Sintaxe
-1. Todas as instruções terminam com `;`
-2. Nomes são case-sensitive e limitados a 7 caracteres
-3. Endereços devem ser especificados em hexadecimal (ex: `0x1000`)
-4. Valores numéricos podem ser decimais ou hexadecimais
-5. Comentários começam com `//` e vão até o final da linha
-6. Operador `&` indica operações com ponteiros/endereços
-
-## Exemplo Completo
-```n
-// Programa exemplo em linguagem N
-Create(main);
-Create(backgr);
-
-mem1 = mmap(0x1000, 32);
-mem2 = mmap(0x2000, 64);
-in1 = mmap(0x3000, 4);
-str = mmap(0x4000, 20);
-
-input_n(in1);
-input_s(str, 20);
-
-mem1 = mem2;        // Copia valor
-&mem1 = &mem2;      // Compartilha endereço
-tmp = mem1 + 10;    // Soma valor
-&mem1 = &mem1 + 4;  // Ajusta ponteiro
-res = mem1 + mem2;
-dif = mem2 - mem1;
-
-print_n(in1);
-print_p(mem2);
-print_s(str);
-
-label(loop);
-    print_n(res);
     res = res - 1;
-    jump_eq(loop, res, 0);
-
-label(end);
-    jump_eq(end, dif, dif);
-
-Terminate();
+    jump_gt(loop, res, 0);
 ```
 
-## Compilação e Execução
-Para compilar programas em linguagem N:
-```bash
-./parser programa.n
+#### Jumps disponíveis:
+
+* `jump_eq(label, a, b)` — salta se `a == b`
+* `jump_neq(label, a, b)` — salta se `a != b`
+* `jump_gt(label, a, b)` — salta se `a > b`
+* `jump_lt(label, a, b)` — salta se `a < b`
+
+---
+
+### Processos
+
+#### Criação:
+
+```n
+Create(nome); // Procura o arquivo ./process/nome
 ```
 
-O parser gerará uma lista de instruções interpretáveis pelo simulador de memória virtual.
+* Cada processo é um arquivo `.n` separado.
+* O simulador executa os processos em uma **fila de execução**, com paralelismo simulado.
+* Processos **não compartilham memória** entre si.
 
-## Limitações Conhecidas
-- Nomes de variáveis/processos limitados a 7 caracteres
-- Não suporta operações matemáticas complexas
-- Não possui sistema de funções ou subrotinas
-- Tipagem estática implícita
-- Ponteiros não têm aritmética baseada em tipo (sempre em bytes)
+#### Término:
 
-Esta documentação cobre todos os aspectos essenciais da linguagem N para desenvolvimento de programas para o simulador de memória virtual.
+```n
+Terminate(); // Encerra o processo atual
+```
+
+* Um processo não possui subprocessos. Todos têm mesma hierarquia.
+
+---
+
+### Execução e Depuração
+
+* O simulador executa a linguagem **ciclo a ciclo**, visível na interface.
+* É o próprio mecanismo de depuração.
+* Toda execução falha é detectada em tempo de simulação (leitura inválida, variáveis não declaradas, input malformado, etc).
+
+---
+
+### Erros Comuns
+
+| Erro                       | Consequência                     |
+|----------------------------|----------------------------------|
+| Uso de variável não criada | Processo é terminado             |
+| Falha ao converter input   | Processo é terminado             |
+| Instrução malformada       | Processo é suspenso ou bloqueado |
+| Acesso inválido na memória | Processo é encerrado             |
+
+---
+
+### Exemplos de Código
+
+**Criar múltiplos processos:**
+
+```n
+cont = mmap(0x1000, 4);
+
+&vezes = "Quantos vezes você quer criar o processo test?";
+
+print_s(vezes);
+input_n(cont);
+
+label(loop1);
+    cont = cont - 1;
+    Create(test);
+    jump_gt(loop1, cont, 0);
+```
+
+---
+
+Posso agora te entregar esse conteúdo como um arquivo `.md` (Markdown), `.pdf` ou outro formato se quiser. Deseja que eu gere esse arquivo? Quer adicionar mais seções (como estilo, boas práticas, etc)?
