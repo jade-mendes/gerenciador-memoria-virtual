@@ -63,7 +63,7 @@ void send_file(const int client_socket, char *filename, const char *content_type
     char path[1024];
     format_file_path(filename);
     sprintf(path, base_file_path, filename);
-    printf("%s", path);
+    //printf("%s", path);
     FILE *file = fopen(path, "r");
     if (file == NULL) {
         // Arquivo não encontrado
@@ -119,34 +119,62 @@ int handle_rotes(char *buffer, const int client_socket){
 }
 
 void handle_request(const int client_socket) {
-    char buffer[4096];
-    const int n = read(client_socket, buffer, sizeof(buffer) - 1);
+    char buffer[8192]; // Aumentado o buffer para comportar headers + body
+    int n = read(client_socket, buffer, sizeof(buffer) - 1);
     if (n <= 0) return;
     buffer[n] = '\0';
 
+    // Verifica se a requisição usa "Transfer-Encoding: chunked"
+    if (strstr(buffer, "Transfer-Encoding: chunked")) {
+        const char *not_implemented = "HTTP/1.1 501 Not Implemented\r\n"
+                                      "Content-Type: text/plain\r\n\r\n"
+                                      "501 - Chunked encoding not supported.\n";
+        write(client_socket, not_implemented, strlen(not_implemented));
+        return;
+    }
+
+    // Encontrar o início do corpo
+    char *body_start = strstr(buffer, "\r\n\r\n");
+    if (body_start != NULL) {
+        body_start += 4;  // pula os "\r\n\r\n"
+    }
+
+    // Tenta encontrar Content-Length
+    int content_length = 0;
+    char *cl = strcasestr(buffer, "Content-Length:");
+    if (cl != NULL) {
+        sscanf(cl, "Content-Length: %d", &content_length);
+    }
+
+    // Lê o corpo completo se não tiver vindo tudo no primeiro read()
+    int header_len = body_start ? (body_start - buffer) : n;
+    int body_bytes_read = n - header_len;
+
+    while (body_bytes_read < content_length && n < sizeof(buffer) - 1) {
+        const int r = read(client_socket, buffer + n, sizeof(buffer) - 1 - n);
+        if (r <= 0) break;
+        n += r;
+        buffer[n] = '\0';
+        body_bytes_read += r;
+    }
+
     #ifdef DEBUG_WEB3
-        write(STDOUT_FILENO, "Requisição recebida:\n", 21);
-        write(STDOUT_FILENO, buffer, n);
+        printf("\n--- Requisição Recebida ---\n%s\n----------------------------\n", buffer);
     #endif
 
     char* strtok_r_buf;
-    // Checar se é GET ou POST
-    if (strncmp(buffer, "GET", 3) == 0) {
-        
-        // Tratamento de rotas
-        if(handle_rotes(buffer, client_socket));
 
-        // css
+    if (strncmp(buffer, "GET", 3) == 0) {
+        // Tratamento de rotas GET
+        if (handle_rotes(buffer, client_socket));
+
         else if (strstr(buffer, ".css ") != NULL) {
             char *filename = strtok_r(buffer + 5, " ", &strtok_r_buf);
             send_file(client_socket, filename, "text/css");
-        }
-        // html
-        else if (strstr(buffer, ".html ") != NULL) {
+        } else if (strstr(buffer, ".html ") != NULL) {
             char *filename = strtok_r(buffer + 5, " ", &strtok_r_buf);
             send_file(client_socket, filename, "text/html");
-        }
-        else {
+        } else {
             char *filename = strtok_r(buffer + 5, " ", &strtok_r_buf);
             send_file(client_socket, filename, "text/plain");
         }
@@ -159,11 +187,11 @@ void handle_request(const int client_socket) {
         ADD_POST_A("/next-cycle", web_next_cycle)
         ADD_POST_A("/set-user-input", web_set_user_input)
     }
-
     else {
-        write(client_socket, "HTTP/1.1 405 Method Not Allowed", 31);
+        write(client_socket, "HTTP/1.1 405 Method Not Allowed\r\n", 33);
     }
 }
+
 
 void* thread_handle_request(void* arg) {
     int client_socket = (intptr_t) arg;
