@@ -94,11 +94,23 @@ function atualizarTLB(tlb) {
 
     tlb.forEach(entry => {
         const row = document.createElement("tr");
+
+        // Destacar linhas válidas
+        if (entry.valid) {
+            row.classList.add("valid-entry");
+        }
+
+        // Converter valores booleanos para texto
+        const validText = entry.valid ? "Sim" : "Não";
+        const referencedText = entry.referenced ? "Sim" : "Não";
+
         row.innerHTML = `
+            <td>${entry.index}</td>
+            <td>${validText}</td>
             <td>${entry.virtual}</td>
             <td>${entry.real}</td>
             <td>${entry.last_used}</td>
-            <td>${entry.referenced}</td>
+            <td>${referencedText}</td>
         `;
         tbody.appendChild(row);
     });

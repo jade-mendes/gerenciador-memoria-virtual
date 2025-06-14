@@ -1,6 +1,6 @@
 // Muitos olá
 
-cont = mmap(0x1000, 4);
+&cont = mmap(0x1000, 4);
 
 &vezes = "Quantos vezes você quer criar o processo test?";
 

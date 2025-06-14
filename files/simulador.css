@@ -345,3 +345,17 @@ body {
     border-radius: 4px;
     font-size: 14px;
 }
+
+.valid-entry {
+    background-color: #e8f5e9; /* Verde claro para entradas válidas */
+    font-weight: bold;
+}
+
+.valid-entry td:first-child {
+    font-weight: bold;
+    color: #2e7d32; /* Verde escuro */
+}
+
+#tlb-table tr:hover {
+    background-color: #f5f5f5;
+}

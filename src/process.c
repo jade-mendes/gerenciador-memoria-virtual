@@ -149,6 +149,9 @@ Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruct
 // Função para terminar um processo
 void terminar_processo(Simulador* sim, Process* process) {
     if (!process) return;
+    if (sim->current_process == process) {
+        sim->current_process = NULL; // Libera a CPU se o processo atual for o que está sendo terminado
+    }
 
     destroy_page_table(&sim->main_memory_ctx, process->page_table);
     hashmap_destroy(process->variables_adrr); // Função hipotética

@@ -42,13 +42,14 @@ typedef struct {
     uint32_t page;
     uintptr_t frame;
     bool valid;
-    uint64_t last_used;
+    uint32_t last_used;   // Usado para LRU
+    bool referenced;      // Usado para CLOCK
 } TLB_ENTRY;
 
 typedef struct TLB {
     TLB_ENTRY* entries;
     uint32_t size;
-    uint64_t counter;
+    uint32_t clock_hand;  // Ponteiro para política CLOCK
 } TLB ;
 
 

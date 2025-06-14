@@ -18,7 +18,8 @@ typedef struct TLB TLB;
 
 typedef enum {
     SUB_POLICY_LRU,
-    SUB_POLICY_CLOCK
+    SUB_POLICY_CLOCK,
+    SUB_POLICY_RANDOM,
 } SubPolicyType;
 
 typedef struct {
@@ -46,6 +47,7 @@ typedef struct Simulador {
     TLB* tlb;
 
     uint32_t current_cycle;
+    bool important_cycle;
 } Simulador;
 
 extern Simulador* simulador;

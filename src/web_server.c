@@ -141,7 +141,7 @@ void handle_request(const int client_socket) {
 
     // Tenta encontrar Content-Length
     int content_length = 0;
-    char *cl = strcasestr(buffer, "Content-Length:");
+    const char *cl = strstr(buffer, "Content-Length:");
     if (cl != NULL) {
         sscanf(cl, "Content-Length: %d", &content_length);
     }

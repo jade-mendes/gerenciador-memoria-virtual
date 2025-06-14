@@ -58,6 +58,8 @@ void escalonamento(Simulador* sim) {
 
 bool proxima_acao(Simulador* sim) {
     sim->current_cycle++;
+    sim->important_cycle = false;
+
     if (!sim->current_process) {
         // Escalona novo processo se disponível
         if (!process_queue_is_empty(sim->process_queue)) {
@@ -112,8 +114,11 @@ bool proxima_acao(Simulador* sim) {
         simulador = sim;
         execute(current_index, sim->current_process->pid, instructions);
 
-        sim->current_process->instruction_index++;
-        sim->current_process->time_slice_remaining--;
+        if (sim->current_process) {
+            sim->current_process->instruction_index++;
+            sim->current_process->time_slice_remaining--;
+        }
+
     }
     else {
         // Se não há mais instruções, termina o processo
@@ -254,11 +259,13 @@ char* generate_simulator_json(Simulador* sim) {
     snprintf(buffer, sizeof(buffer),
         "{\n"
         "\"cycle\": %u,\n"
+        "\"important_cycle\": %s,\n"
         "\"main-memory_usage\": %f,\n"
         "\"secondary-memory_usage\": %f,\n"
         "\"last_msg\": \"%s\",\n"
         "\"last_error\": \"%s\",\n",
         sim->current_cycle,
+        sim->important_cycle ? "true" : "false",
         (float) nalloc_allocated_size(&sim->main_memory_ctx) / sim->main_memory_ctx.total_size,
         (float) nalloc_allocated_size(&sim->secondary_memory_ctx) / sim->secondary_memory_ctx.total_size,
         process_output,
@@ -387,31 +394,36 @@ char* generate_simulator_json(Simulador* sim) {
 
     // TLB
     if (sim->tlb) {
-        sb_append(&sb, "\"tlb\": [\n");
+        sb_append(&sb, "\"tlb\": [");
         bool first_tlb = true;
         for (uint32_t i = 0; i < sim->tlb->size; i++) {
-            TLB_ENTRY* entry = &sim->tlb->entries[i];
-            if (entry->valid) {
-                if (!first_tlb) sb_append(&sb, ",\n");
-                first_tlb = false;
-
-                uint32_t virt_addr = entry->page * sim->config.PAGE_SIZE;
-                uint32_t phys_addr = (uint32_t)(entry->frame) * sim->config.PAGE_SIZE;
-
-                // Flag da TLB
-                const char* referenced = entry->valid ? "Sim" : "Não";
-                snprintf(buffer, sizeof(buffer),
-                    "  {\"virtual\": \"0x%04x\", \"real\": \"0x%04x\", "
-                    "\"last_used\": \"%lu\", \"referenced\": \"%s\"}",
-                    virt_addr, phys_addr, entry->last_used, referenced);
-                sb_append(&sb, buffer);
+            const TLB_ENTRY* entry = &sim->tlb->entries[i];
+            if (!first_tlb) {
+                sb_append(&sb, ",");
             }
+            first_tlb = false;
+            sb_append(&sb, "\n        ");
+
+            const uint32_t virt_addr = entry->page * sim->config.PAGE_SIZE;
+            const uint32_t phys_addr = (uint32_t)(entry->frame) * sim->config.PAGE_SIZE;
+
+            snprintf(buffer, sizeof(buffer),
+                "{\"index\": %u, \"valid\": %s, \"virtual\": \"0x%04x\", "
+                "\"real\": \"0x%04x\", \"last_used\": %u, \"referenced\": %s}",
+                i,
+                entry->valid ? "true" : "false",
+                virt_addr,
+                phys_addr,
+                entry->last_used,
+                entry->referenced ? "true" : "false");
+            sb_append(&sb, buffer);
         }
-        sb_append(&sb, "\n]\n}");
+        sb_append(&sb, "\n    ]");
     }
     else {
-        sb_append(&sb, "\"tlb\": [],\n");
+        sb_append(&sb, "\"tlb\": []\n");
     }
+    sb_append(&sb, "\n}");
 
 
     return sb_finalize(&sb);

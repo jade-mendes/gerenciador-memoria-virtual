@@ -168,7 +168,8 @@ uint32_t read_variable(Process* p, const char* var_name) {
 
     if (!hashmap_get(p->variables_adrr, key, &addr)) {
         if (!allocate_variable(p, key)) {
-            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s", var_name);
+            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s [PROCESSO ENCERRADO!]", var_name);
+            terminar_processo(simulador, p);
             return 0;
         }
         hashmap_get(p->variables_adrr, key, &addr);
@@ -183,8 +184,9 @@ uint32_t read_variable(Process* p, const char* var_name) {
         int status;
         uint8_t byte = get_mem(simulador, p, addr + i, &status);
         if (status != MEM_ACCESS_OK) {
-            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s",
+            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));
+            terminar_processo(simulador, p);
             return 0;
         }
         value |= (byte << (8 * i));
@@ -198,22 +200,25 @@ void read_variable_to_buffer(Process* p, const char* var_name, char* buffer, siz
 
     if (!hashmap_get(p->variables_adrr, key, &addr)) {
         if (!allocate_variable(p, key)) {
-            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s", var_name);
+            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s [PROCESSO ENCERRADO!]", var_name);
+            terminar_processo(simulador, p);
             return;
         }
         hashmap_get(p->variables_adrr, key, &addr);
     }
 
     if (var_name[0] == '&') {
-        perror("Erro: Não é possível ler o endereço de uma variável");
+        perror("Erro: Não é possível ler o endereço de uma variável [PROCESSO ENCERRADO!]");
+        terminar_processo(simulador, p);
     }
 
     for (int i = 0; i < buffer_size - 1; i++) {
         int status;
         uint8_t byte = get_mem(simulador, p, addr + i, &status);
         if (status != MEM_ACCESS_OK) {
-            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s",
+            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));
+            terminar_processo(simulador, p);
             return;
         }
         buffer[i] = byte;
@@ -229,14 +234,16 @@ void read_variable_to_string(Process* p, const char* var_name, char* str) {
 
     if (!hashmap_get(p->variables_adrr, key, &addr)) {
         if (!allocate_variable(p, key)) {
-            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s", var_name);
+            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s [PROCESSO ENCERRADO!]", var_name);
+            terminar_processo(simulador, p);
             return;
         }
         hashmap_get(p->variables_adrr, key, &addr);
     }
 
     if (var_name[0] == '&') {
-        perror("Erro: Não é possível ler o endereço de uma variável");
+        perror("Erro: Não é possível ler o endereço de uma variável [PROCESSO ENCERRADO!]");
+        terminar_processo(simulador, p);
     }
 
     uint8_t byte;
@@ -245,8 +252,9 @@ void read_variable_to_string(Process* p, const char* var_name, char* str) {
         int status;
         byte = get_mem(simulador, p, addr + i, &status);
         if (status != MEM_ACCESS_OK) {
-            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s",
+            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));
+            terminar_processo(simulador, p);
             return;
         }
         str[i] = byte;
@@ -256,12 +264,13 @@ void read_variable_to_string(Process* p, const char* var_name, char* str) {
 
 // Função auxiliar para escrever variáveis
 void write_variable(Process* p, const char* var_name, uint32_t value) {
-    const char* key = (var_name[0] == '&') ? var_name + 1 : var_name;
+    const char* key = var_name[0] == '&' ? var_name + 1 : var_name;
     uint32_t addr;
 
     if (!hashmap_get(p->variables_adrr, key, &addr)) {
         if (!allocate_variable(p, key)) {
-            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s", var_name);
+            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s [PROCESSO ENCERRADO!]", var_name);
+            terminar_processo(simulador, p);
             return;
         }
         hashmap_get(p->variables_adrr, key, &addr);
@@ -277,8 +286,9 @@ void write_variable(Process* p, const char* var_name, uint32_t value) {
         int status;
         set_mem(simulador, p, addr + i, byte, &status);
         if (status != MEM_ACCESS_OK) {
-            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s",
+            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));
+            terminar_processo(simulador, p);
             break;
         }
     }
@@ -290,14 +300,16 @@ void write_variable_buffer(Process* p, const char* var_name, const char* buffer,
 
     if (!hashmap_get(p->variables_adrr, key, &addr)) {
         if (!allocate_variable(p, key)) {
-            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s", var_name);
+            snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar variavel %s [PROCESSO ENCERRADO!]", var_name);
+            terminar_processo(simulador, p);
             return;
         }
         hashmap_get(p->variables_adrr, key, &addr);
     }
 
     if (var_name[0] == '&') {
-        perror("Erro: Não é possível escrever o endereço de uma variável");
+        perror("Erro: Não é possível escrever o endereço de uma variável [PROCESSO ENCERRADO!]");
+        terminar_processo(simulador, p);
         return;
     }
 
@@ -305,8 +317,9 @@ void write_variable_buffer(Process* p, const char* var_name, const char* buffer,
         int status;
         set_mem(simulador, p, addr + i, buffer[i], &status);
         if (status != MEM_ACCESS_OK) {
-            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%lu: %s",
+            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));
+            terminar_processo(simulador, p);
             break;
         }
     }
@@ -315,20 +328,22 @@ void write_variable_buffer(Process* p, const char* var_name, const char* buffer,
 // Implementações das instruções ============================================
 
 void inst_create(char *process_name, const size_t pid) {
+    snprintf(process_output, MAX_MSG_SIZE, "Criando processo: %s", process_name);
+
     // Ler instruções do arquivo
     Instruction *instructions;
     size_t instruction_count;
     char *text_out;
     int text_size;
-
-    snprintf(process_output, MAX_MSG_SIZE, "Criando processo: %s", process_name);
-
     char file_name[100];
     snprintf(file_name, sizeof(file_name), "./process/%s.bin", process_name);
-
     get_instructions(file_name, &instructions, &instruction_count, &text_out, &text_size);
 
-    criar_processo(simulador, rand(), process_name, instructions, instruction_count, text_out, text_size);
+    Process* p = criar_processo(simulador, rand(), process_name, instructions, instruction_count, text_out, text_size);
+
+    if (!p) {
+        snprintf(process_error, MAX_MSG_SIZE, "Falha ao criar processo %s", process_name);
+    }
 
     free(instructions);
     if (text_out) free(text_out);
@@ -341,52 +356,65 @@ void inst_terminate(const size_t pid) {
 
 void inst_mmap(const char *var_name, uintptr_t add_like, int size, const size_t pid) {
     Process* p = simulador->current_process;
+    if (var_name[0] != '&') {
+        snprintf(process_error, MAX_MSG_SIZE, "Variável deve ser um endereço (começar com '&') [PROCESSO ENCERRADO!]");
+        terminar_processo(simulador, p);
+        return;
+    }
+    char* key = (char*) var_name + 1; // Remove o '&' do nome da variável
+
     const uint32_t page_size = simulador->config.PAGE_SIZE;
     const uint32_t start_page = add_like & ~(page_size - 1);
     const uint32_t end = add_like + size;
-    const uint32_t end_page = (end + page_size - 1) & ~(page_size - 1);
+    const uint32_t end_page = end + page_size - 1 & ~(page_size - 1);
     const uint32_t num_pages = (end_page - start_page) / page_size;
 
-    snprintf(process_output, MAX_MSG_SIZE, "Mapeando %d paginas em 0x%lx para %s", num_pages, add_like, var_name);
+    snprintf(process_output, MAX_MSG_SIZE, "Mapeando %d paginas em 0x%lx para %s", num_pages, add_like, key);
 
     for (uint32_t i = 0; i < num_pages; i++) {
         uint32_t addr = start_page + i * page_size;
         if (!allocate_page(simulador, p, addr)) {
             snprintf(process_error, MAX_MSG_SIZE, "Falha ao alocar pagina em 0x%x", addr);
+            p->instruction_index--; // Reverte o índice da instrução para não avançar
+            if (try_swipe(simulador, p)) {
+                strcat(process_error, " [PROCESSO SUSPENDED]");
+            }
+            else {
+                terminar_processo(simulador, p);
+                strcat(process_error, " [SEM MS!] [PROCESSO ENCERRADO!]");
+            }
             return;
         }
     }
 
-    if (!hashmap_put(p->variables_adrr, var_name, add_like)) {
-        snprintf(process_error, MAX_MSG_SIZE, "Falha ao registrar variavel %s", var_name);
+    if (!hashmap_put(p->variables_adrr, key, add_like)) {
+        snprintf(process_error, MAX_MSG_SIZE, "Falha ao registrar variavel %s [PROCESSO ENCERRADO!]", key);
+        terminar_processo(simulador, p);
     }
 }
 
 void inst_print_n(const char *var_name, const size_t pid) {
     Process* p = simulador->current_process;
     uint32_t value = read_variable(p, var_name);
-    if (process_error[0] == '\0') { // Se não houve erro
-        snprintf(process_output, MAX_MSG_SIZE, "Printing valor numerico: [%d]", value);
-    }
+    snprintf(process_output, MAX_MSG_SIZE, "Printing valor numerico: [%d]", value);
+    simulador->important_cycle = true;
 }
 
 void inst_print_p(const char *var_name, const size_t pid) {
     Process* p = simulador->current_process;
     uint32_t value = read_variable(p, var_name);
-    if (process_error[0] == '\0') { // Se não houve erro
-        snprintf(process_output, MAX_MSG_SIZE, "Printing endereco: [%p]", (void*)(uintptr_t)value);
-    }
+    snprintf(process_output, MAX_MSG_SIZE, "Printing endereco: [%p]", (void*)(uintptr_t)value);
+    simulador->important_cycle = true;
 }
 
 void inst_print_s(const char *var_name, const size_t pid) {
     Process* p = simulador->current_process;
+
     char str[MAX_MSG_SIZE] = {0};
-
     read_variable_to_string(p, var_name, str);
+    snprintf(process_output, MAX_MSG_SIZE, "Printing string: ['%s']", str);
 
-    if (process_error[0] == '\0') { // Se não houve erro
-        snprintf(process_output, MAX_MSG_SIZE, "Printing string: ['%s']", str);
-    }
+    simulador->important_cycle = true;
 }
 
 void inst_assign(const char *var1, const char *var2, const size_t pid) {
@@ -509,6 +537,7 @@ void inst_input_n(const char *var_name, const size_t pid) {
     int value;
     if (sscanf(process_input, "%d", &value) != 1) {
         snprintf(process_error, MAX_MSG_SIZE, "Erro: entrada invalida para inteiro");
+        p->instruction_index--; // Reverte o índice da instrução para não avançar
         return;
     }
     snprintf(process_output, MAX_MSG_SIZE, "Lendo inteiro: %d", value);
@@ -521,6 +550,7 @@ void inst_input_s(const char *var_name, int size, const size_t pid) {
     Process* p = simulador->current_process;
     if (size <= 0 || size > MAX_MSG_SIZE - 1) {
         snprintf(process_error, MAX_MSG_SIZE, "Erro: tamanho invalido para string");
+        p->instruction_index--; // Reverte o índice da instrução para não avançar
         return;
     }
     char buffer[MAX_MSG_SIZE] = {0};

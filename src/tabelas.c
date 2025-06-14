@@ -4,17 +4,47 @@
 
 #include "tabelas.h"
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "process.h"
 #include "Simulador.h"
 
 // Funções de gerenciamento da TLB
+TLB* create_tlb(NallocContext* ctx, const uint32_t size) {
+    TLB* tlb = nalloc_alloc(ctx, sizeof(TLB));
+    if (!tlb) return NULL;
+
+    tlb->size = size;
+    tlb->entries = (TLB_ENTRY*)nalloc_alloc(ctx, size * sizeof(TLB_ENTRY));
+    tlb->clock_hand = 0; // Inicializa ponteiro do CLOCK
+
+    if (!tlb->entries) {
+        nalloc_free(ctx, tlb);
+        return NULL;
+    }
+
+    for (uint32_t i = 0; i < size; i++) {
+        tlb->entries[i].valid = false;
+        tlb->entries[i].referenced = false; // Inicializa bit de referência
+    }
+
+    return tlb;
+}
+
+void destroy_tlb(const NallocContext* ctx, TLB* tlb) {
+    if (tlb->entries) {
+        nalloc_free(ctx, tlb->entries);
+    }
+    nalloc_free(ctx, tlb);
+}
+
 bool tlb_lookup(TLB* tlb, const uint32_t page, uintptr_t* frame) {
     for (uint32_t i = 0; i < tlb->size; i++) {
         if (tlb->entries[i].valid && tlb->entries[i].page == page) {
             *frame = tlb->entries[i].frame;
-            tlb->entries[i].last_used = tlb->counter++;
+            tlb->entries[i].last_used = simulador->current_cycle;
+            tlb->entries[i].referenced = true; // Marca como referenciada
             return true;
         }
     }
@@ -22,30 +52,74 @@ bool tlb_lookup(TLB* tlb, const uint32_t page, uintptr_t* frame) {
 }
 
 void tlb_update(TLB* tlb, const uint32_t page, const uintptr_t frame) {
-    uint32_t lru_index = 0;
-    uint64_t min_used = UINT64_MAX;
+    uint32_t index = 0;
+    SubPolicyType policy = simulador->config.SUB_POLICY_TYPE;
 
-    for (uint32_t i = 0; i < tlb->size; i++) {
-        if (!tlb->entries[i].valid) {
-            lru_index = i;
+    switch (policy) {
+        case SUB_POLICY_LRU: {
+            // Política LRU (Least Recently Used)
+            uint64_t min_used = UINT64_MAX;
+            for (uint32_t i = 0; i < tlb->size; i++) {
+                if (!tlb->entries[i].valid) {
+                    index = i;
+                    break;
+                }
+                if (tlb->entries[i].last_used < min_used) {
+                    min_used = tlb->entries[i].last_used;
+                    index = i;
+                }
+            }
             break;
         }
-        if (tlb->entries[i].last_used < min_used) {
-            min_used = tlb->entries[i].last_used;
-            lru_index = i;
+        case SUB_POLICY_CLOCK: {
+            // Política CLOCK (Segunda Chance)
+            while (1) {
+                index = tlb->clock_hand;
+                tlb->clock_hand = (tlb->clock_hand + 1) % tlb->size;
+
+                if (!tlb->entries[index].valid) break;
+
+                if (tlb->entries[index].referenced) {
+                    tlb->entries[index].referenced = false;
+                } else {
+                    break;
+                }
+            }
+            break;
+        }
+        case SUB_POLICY_RANDOM: {
+            // Política RANDOM (Aleatória)
+            uint32_t invalid_count = 0;
+            for (uint32_t i = 0; i < tlb->size; i++) {
+                if (!tlb->entries[i].valid) {
+                    index = i;
+                    invalid_count++;
+                }
+            }
+
+            // Se há entradas inválidas, usa a primeira encontrada
+            // Caso contrário, escolhe aleatoriamente
+            if (invalid_count == 0) {
+                index = rand() % tlb->size;
+            }
+            break;
         }
     }
 
-    tlb->entries[lru_index].page = page;
-    tlb->entries[lru_index].frame = frame;
-    tlb->entries[lru_index].valid = true;
-    tlb->entries[lru_index].last_used = tlb->counter++;
+    // Atualiza a entrada selecionada
+    tlb->entries[index].page = page;
+    tlb->entries[index].frame = frame;
+    tlb->entries[index].valid = true;
+    tlb->entries[index].last_used = simulador->current_cycle;
+    tlb->entries[index].referenced = true; // Marca como referenciada
 }
+
 
 void tlb_invalidate_entry(const TLB* tlb, const uint32_t page) {
     for (uint32_t i = 0; i < tlb->size; i++) {
         if (tlb->entries[i].valid && tlb->entries[i].page == page) {
             tlb->entries[i].valid = false;
+            tlb->entries[i].referenced = false; // Reseta bit de referência
             break;
         }
     }
@@ -54,6 +128,7 @@ void tlb_invalidate_entry(const TLB* tlb, const uint32_t page) {
 void reset_tlb_validity(const TLB* tlb) {
     for (uint32_t i = 0; i < tlb->size; i++) {
         tlb->entries[i].valid = false;
+        tlb->entries[i].referenced = false; // Reseta bit de referência
     }
 }
 
@@ -135,7 +210,6 @@ void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uin
 // Funções de gerenciamento de páginas ==============
 
 // Aloca uma página virtual para o processo
-// Pode ser chamada apenas por processos na memória principal
 bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
     uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
 
@@ -230,33 +304,6 @@ void destroy_page_table(const NallocContext* ctx, PAGE_TABLE* pt) {
     nalloc_free(ctx, pt);
 }
 
-TLB* create_tlb(NallocContext* ctx, const uint32_t size) {
-    TLB* tlb = nalloc_alloc(ctx, sizeof(TLB));
-    if (!tlb) return NULL;
-
-    tlb->size = size;
-    tlb->counter = 0;
-    tlb->entries = (TLB_ENTRY*)nalloc_alloc(ctx, size * sizeof(TLB_ENTRY));
-
-    if (!tlb->entries) {
-        nalloc_free(ctx, tlb);
-        return NULL;
-    }
-
-    for (uint32_t i = 0; i < size; i++) {
-        tlb->entries[i].valid = false;
-    }
-
-    return tlb;
-}
-
-void destroy_tlb(const NallocContext* ctx, TLB* tlb) {
-    if (tlb->entries) {
-        nalloc_free(ctx, tlb->entries);
-    }
-    nalloc_free(ctx, tlb);
-}
-
 // Função para destruir páginas de um processo
 void destroy_process_pages(Simulador* s, Process* p) {
     for (uint32_t i = 0; i < p->page_table->num_entries; i++) {
@@ -265,8 +312,6 @@ void destroy_process_pages(Simulador* s, Process* p) {
         }
     }
 }
-
-
 
 
 PAGE_TABLE* page_table_clone(const NallocContext* new_ctx, const PAGE_TABLE* original_pt, const uint32_t page_size) {
