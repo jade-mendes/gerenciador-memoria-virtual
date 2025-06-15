@@ -186,6 +186,7 @@ void handle_request(const int client_socket) {
         ADD_POST_A("/start-simulation", start_simulation_button)
         ADD_POST_A("/next-cycle", web_next_cycle)
         ADD_POST_A("/set-user-input", web_set_user_input)
+        ADD_POST_A("/get-data-from-address", web_get_data_from_address)
     }
     else {
         write(client_socket, "HTTP/1.1 405 Method Not Allowed\r\n", 33);

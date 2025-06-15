@@ -336,13 +336,12 @@ char* generate_simulator_json(Simulador* sim) {
                     first_page = false;
 
                     uint32_t virt_addr = i * sim->config.PAGE_SIZE;
-                    uint32_t phys_addr = (uint32_t)(entry->frame) * sim->config.PAGE_SIZE;
                     const char* dirty = entry->dirty ? "Sim" : "Não";
                     const char* referenced = entry->referenced ? "Sim" : "Não";
 
                     snprintf(buffer, sizeof(buffer),
-                        "      {\"virtual\": \"0x%04x\", \"real\": \"0x%04x\", \"dirty\": \"%s\", \"referenced\": \"%s\"}",
-                        virt_addr, phys_addr, dirty, referenced);
+                        "      {\"virtual\": \"0x%04x\", \"real\": \"%p\", \"dirty\": \"%s\", \"referenced\": \"%s\"}",
+                        virt_addr, (void*)entry->frame, dirty, referenced);
                     sb_append(&sb, buffer);
                 }
             }

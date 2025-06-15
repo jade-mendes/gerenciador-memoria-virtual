@@ -7,8 +7,36 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({null: null})
             });
-            const data = await response.json();
+            const data = await response.json(); //important_cycle
             atualizarPagina(data);
+        } catch (error) {
+            console.error("Erro ao buscar /next-cycle:", error);
+        }
+    });
+    // botão direito
+    document.getElementById("next-cycle").addEventListener("contextmenu", async (e) => {
+        e.preventDefault(); // Previne o menu de contexto padrão
+        const audio_normal = new Audio('/next-cycle.wav');
+        const audio_important = new Audio('/next-cycle-important.mp3');
+        try {
+            let importantCycle = false;
+            while (!importantCycle) {
+                const response = await fetch("/next-cycle", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({null: null})
+                });
+                const data = await response.json();
+                atualizarPagina(data);
+                importantCycle = data.important_cycle; // Verifica se é um ciclo importante
+                // await new Promise(resolve => setTimeout(resolve, 1000)); // Espera 1 segundo antes de continuar
+                if (importantCycle) {
+                    await audio_important.play();
+                }
+                else {
+                    await audio_normal.play();
+                }
+            }
         } catch (error) {
             console.error("Erro ao buscar /next-cycle:", error);
         }
@@ -140,7 +168,7 @@ function atualizarListaDeProcessos(lista) {
                             ${proc.page_table.map(p => `
                                 <tr>
                                     <td>${p.virtual}</td>
-                                    <td>${p.real}</td>
+                                    <td onclick="SetAddressFromPage(${p.real})">${p.real}</td>
                                     <td>${p.dirty}</td>
                                     <td>${p.referenced}</td>
                                 </tr>
@@ -198,4 +226,45 @@ async function enviarInputUsuario() {
     } catch (error) {
         console.error("Erro ao enviar input:", error);
     }
+}
+
+
+async function GetMemory() {
+    const address = document.getElementById("address-input").value.trim();
+    if (!address) return;
+    const size = parseInt(document.getElementById("size-input").value.trim());
+    if (isNaN(size) || size <= 0) {
+        alert("Por favor, insira um tamanho válido.");
+        return;
+    }
+
+    const conteudo = document.getElementById("memory-content-main");
+
+    for (let i = 0; i < size; i++) {
+        try {
+            const response = await fetch("/get-data-from-address", {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({address: parseInt(address) + i})
+            });
+            const data = await response.json();
+            if (data.error) {
+                alert(`Erro ao acessar memória: ${data.error}`);
+                return;
+            }
+            console.log(`Endereço ${parseInt(address) + i}: ${data.value}`);
+            conteudo.innerHTML += String.fromCharCode(data.value);
+        } catch (error) {
+            console.error("Erro ao buscar /get-memory:", error);
+        }
+    }
+}
+
+function SetAddressFromPage(address) {
+    document.getElementById("address-input").value = address;
+}
+
+function LimparMemoria() {
+    document.getElementById("memory-content-main").innerHTML = "";
+    document.getElementById("address-input").value = "";
 }

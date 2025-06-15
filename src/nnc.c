@@ -107,10 +107,34 @@ Instruction* parse_instructions(FILE* file, int* count_insts, char** texts_out, 
                 capacity = capacity ? capacity * 2 : 16;
                 instructions = realloc(instructions, capacity * sizeof(Instruction));
             }
-            instructions[*count_insts] = (Instruction){
-                .type = INST_CREATE
-            };
-            safe_strcpy(instructions[*count_insts].args.create.process_name, name);
+
+            if (name[0] == '"' && name[strlen(name)-1] == '"') {
+                name[strlen(name)-1] = '\0';
+                name++;
+
+                int str_len = strlen(name);
+                if (*texts_out) {
+                    *texts_out = realloc(*texts_out, *text_size + str_len + 1);
+                } else {
+                    *texts_out = malloc(str_len + 1);
+                }
+
+                // Copiar string para o buffer de textos
+                strcpy(*texts_out + *text_size, name);
+
+                instructions[*count_insts] = (Instruction){
+                    .type = INST_CREATE_NUM,
+                    .args.create_num.num = *text_size
+                };
+
+                *text_size += str_len + 1;
+            }
+            else {
+                instructions[*count_insts] = (Instruction){
+                    .type = INST_CREATE_VAR
+                };
+                safe_strcpy(instructions[*count_insts].args.create_var.process_name, name);
+            }
             (*count_insts)++;
         }
         else if (strcmp(trimmed, "Terminate();") == 0) {
@@ -277,7 +301,7 @@ Instruction* parse_instructions(FILE* file, int* count_insts, char** texts_out, 
                             .args.assign_var_num.num = (int)expr[0]  // Valor ASCII do caractere
                         };
                         safe_strcpy(instructions[*count_insts].args.assign_var_num.var1, var1);
-                        (*count_insts)++;  // IMPORTANTE: incrementar o contador
+                        (*count_insts)++;
                     }
                     // var = "string";
                     else if (expr[0] == '"' && expr[strlen(expr)-1] == '"') {
@@ -694,8 +718,12 @@ void print_instructions(const size_t count, Instruction *instructions) {
     for (int i = 0; i < count; i++) {
         printf("Instrução %d: ", i);
         switch (instructions[i].type) {
-            case INST_CREATE:
-                printf("CREATE(%s)\n", instructions[i].args.create.process_name);
+            case INST_CREATE_VAR:
+                printf("CREATE_VAR(%s)\n", instructions[i].args.create_var.process_name);
+                break;
+            case INST_CREATE_NUM:
+                printf("CREATE_NUM(%d)\n",
+                       instructions[i].args.create_num.num);
                 break;
             case INST_TERMINATE:
                 printf("TERMINATE\n");

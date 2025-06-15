@@ -1,0 +1,22 @@
+&n = mmap(0x1000, 4);       // Número de termos
+&a = mmap(0x1004, 4);       // Termo anterior (a)
+&b = mmap(0x1008, 4);       // Termo atual (b)
+&tmp = mmap(0x100C, 4);     // Valor temporário
+
+&msg = "Quantos termos de Fibonacci?";
+print_s(msg);
+
+input_n(n);
+
+a = 0;
+b = 1;
+
+label(loop);
+    print_n(a);
+
+    tmp = a + b;
+    a = b;
+    b = tmp;
+
+    n = n - 1;
+    jump_gt(loop, n, 0);

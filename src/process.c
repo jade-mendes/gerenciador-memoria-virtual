@@ -32,118 +32,131 @@ void destroy_process(Process* process, const NallocContext* nalloc_ctx) {
 }
 
 
-// Função para criar um novo processo
-Process* criar_processo(Simulador* sim, uint32_t pid, const char* name, Instruction* instructions, uint32_t instruction_count, char* texts, int text_size) {
-    // Primeiro tenta criar na memória principal
-    Process* new_process = nalloc_alloc(&sim->main_memory_ctx, sizeof(Process));
-    if (!new_process) goto criar_secundario; // Falha, tenta secundária
+// Função auxiliar para inicializar um processo
+void init_process(Process* proc, const uint32_t pid, const char* name, const uint32_t instruction_count, const Simulador* sim, const ProcessState state) {
+    proc->pid = pid;
+    strncpy(proc->name, name, sizeof(proc->name) - 1);
+    proc->name[sizeof(proc->name) - 1] = '\0';
+    proc->state = state;
+    proc->instruction_index = 0;
+    proc->instruction_count = instruction_count;
+    proc->time_slice_remaining = sim->config.TIME_SLICE;
+}
 
-    // Inicialização básica
-    new_process->pid = pid;
-    strncpy(new_process->name, name, sizeof(new_process->name) - 1);
-    new_process->name[sizeof(new_process->name) - 1] = '\0';
-    new_process->state = PROCESS_READY;
-    new_process->instruction_index = 0;
-    new_process->instruction_count = instruction_count;
-    new_process->time_slice_remaining = sim->config.TIME_SLICE;
+// Função auxiliar para alocar estruturas do processo
+bool allocate_process_objects(Process* proc, NallocContext* alloc_ctx, const uint32_t instruction_count) {
+    proc->page_table = create_page_table(alloc_ctx);
+    proc->variables_adrr = hashmap_create(alloc_ctx, 10);
+    proc->instructions = nalloc_alloc(alloc_ctx, instruction_count * sizeof(Instruction));
 
-    // Aloca estruturas na memória principal
-    new_process->page_table = create_page_table(&sim->main_memory_ctx);
-    new_process->variables_adrr = hashmap_create(&sim->main_memory_ctx, 10);
-    new_process->instructions = nalloc_alloc(&sim->main_memory_ctx, instruction_count * sizeof(Instruction));
+    return proc->page_table && proc->variables_adrr && proc->instructions;
+}
 
-    // Verifica falhas na alocação
-    if (!new_process->page_table || !new_process->variables_adrr || !new_process->instructions) {
-        destroy_process(new_process, &sim->main_memory_ctx);
-        goto criar_secundario;
-    }
+// Função auxiliar para carregar texto na memória
+bool load_process_text(const Simulador* sim, Process* proc, const char* texts, const int text_size) {
+    const int num_pages = (text_size + sim->config.PAGE_SIZE - 1) / sim->config.PAGE_SIZE;
 
-    // Copia instruções
-    memcpy(new_process->instructions, instructions, instruction_count * sizeof(Instruction));
-
-    // Aloca e carrega páginas de texto
-    int num_pages = (text_size + sim->config.PAGE_SIZE - 1) / sim->config.PAGE_SIZE;
     for (int i = 0; i < num_pages; i++) {
-        uintptr_t virt_addr = i * sim->config.PAGE_SIZE;
-        if (!allocate_page(sim, new_process, virt_addr)) {
-            destroy_process(new_process, &sim->main_memory_ctx);
-            goto criar_secundario;
-        }
-        for (int j = 0; j < sim->config.PAGE_SIZE && (i * sim->config.PAGE_SIZE + j) < text_size; j++) {
+        const uintptr_t virt_addr = i * sim->config.PAGE_SIZE;
+        if (!allocate_page(sim, proc, virt_addr)) return false;
+
+        for (int j = 0; j < sim->config.PAGE_SIZE; j++) {
+            const int offset = i * sim->config.PAGE_SIZE + j;
+            if (offset >= text_size) break;
+
             int status = 0;
-            set_mem(sim, new_process, virt_addr + j, texts[i * sim->config.PAGE_SIZE + j], &status);
-            if (status != MEM_ACCESS_OK) {
-                destroy_process(new_process, &sim->main_memory_ctx);
-                goto criar_secundario;
-            }
+            set_mem(sim, proc, virt_addr + j, texts[offset], &status);
+            if (status != MEM_ACCESS_OK) return false;
         }
     }
+    return true;
+}
 
-    // Sucesso na memória principal
-    process_hashmap_put(sim->process_map_main, pid, new_process);
-    process_queue_enqueue(sim->process_queue, new_process);
-    return new_process;
+// Função auxiliar para expandir tabela de páginas (memória secundária)
+bool expand_page_table(const Simulador* sim, const Process* proc, const int text_size) {
+    const int num_pages = (text_size + sim->config.PAGE_SIZE - 1) / sim->config.PAGE_SIZE;
+    PAGE_TABLE_ENTRY* entries = proc->page_table->entries;
 
-    criar_secundario:
-    // Tenta criar como suspenso na memória secundária
-    new_process = nalloc_alloc(&sim->secondary_memory_ctx, sizeof(Process));
-    if (!new_process) return NULL; // Falha total
+    for (int i = 0; i < num_pages; i++) {
+        if (i < proc->page_table->num_entries) continue;
 
-    // Inicialização como suspenso
-    new_process->pid = pid;
-    strncpy(new_process->name, name, sizeof(new_process->name) - 1);
-    new_process->name[sizeof(new_process->name) - 1] = '\0';
-    new_process->state = PROCESS_SUSPENDED;
-    new_process->instruction_index = 0;
-    new_process->instruction_count = instruction_count;
-    new_process->time_slice_remaining = sim->config.TIME_SLICE;
+        const uint32_t new_size = i + 1;
+        PAGE_TABLE_ENTRY* new_entries = nalloc_realloc(
+            &sim->secondary_memory_ctx,
+            entries,
+            new_size * sizeof(PAGE_TABLE_ENTRY)
+        );
 
-    // Aloca estruturas na memória secundária
-    new_process->page_table = create_page_table(&sim->secondary_memory_ctx);
-    new_process->variables_adrr = hashmap_create(&sim->secondary_memory_ctx, 10);
-    new_process->instructions = nalloc_alloc(&sim->secondary_memory_ctx, instruction_count * sizeof(Instruction));
+        if (!new_entries) return false;
 
-    // Verifica falhas
-    if (!new_process->page_table || !new_process->variables_adrr || !new_process->instructions) {
-        destroy_process(new_process, &sim->secondary_memory_ctx);
+        // Inicializa novas entradas
+        for (uint32_t j = proc->page_table->num_entries; j < new_size; j++) {
+            new_entries[j] = (PAGE_TABLE_ENTRY) {
+                .valid = false,
+                .dirty = false,
+                .referenced = false,
+                .frame = INVALID_FRAME
+            };
+        }
+
+        proc->page_table->entries = new_entries;
+        proc->page_table->num_entries = new_size;
+        entries = new_entries; // Atualiza referência para próxima iteração
+    }
+    return true;
+}
+
+// Função para criar processo suspenso (memória secundária)
+Process* create_suspended_process(Simulador* sim, const uint32_t pid, const char* name, const Instruction* instructions, const uint32_t instruction_count, char* texts, const int text_size) {
+    Process* proc = nalloc_alloc(&sim->secondary_memory_ctx, sizeof(Process));
+    if (!proc) return NULL;
+
+    init_process(proc, pid, name, instruction_count, sim, PROCESS_SUSPENDED);
+
+    if (!allocate_process_objects(proc, &sim->secondary_memory_ctx, instruction_count)) {
+        destroy_process(proc, &sim->secondary_memory_ctx);
         return NULL;
     }
 
-    // Copia instruções
-    memcpy(new_process->instructions, instructions, instruction_count * sizeof(Instruction));
+    memcpy(proc->instructions, instructions, instruction_count * sizeof(Instruction));
 
-    // Cria entradas na tabela de páginas (sem alocar frames físicos)
-    num_pages = (text_size + sim->config.PAGE_SIZE - 1) / sim->config.PAGE_SIZE;
-    for (int i = 0; i < num_pages; i++) {
-        uint32_t page_index = i;
-        if (page_index >= new_process->page_table->num_entries) {
-            // Expande tabela se necessário
-            uint32_t new_size = page_index + 1;
-            PAGE_TABLE_ENTRY* new_entries = nalloc_realloc(&sim->secondary_memory_ctx,
-                new_process->page_table->entries,
-                new_size * sizeof(PAGE_TABLE_ENTRY));
-
-            if (!new_entries) {
-                destroy_process(new_process, &sim->secondary_memory_ctx);
-                return NULL;
-            }
-
-            // Inicializa novas entradas
-            for (uint32_t j = new_process->page_table->num_entries; j < new_size; j++) {
-                new_entries[j].valid = false;
-                new_entries[j].dirty = false;
-                new_entries[j].referenced = false;
-                new_entries[j].frame = INVALID_FRAME;
-            }
-
-            new_process->page_table->entries = new_entries;
-            new_process->page_table->num_entries = new_size;
-        }
+    if (!expand_page_table(sim, proc, text_size)) {
+        destroy_process(proc, &sim->secondary_memory_ctx);
+        return NULL;
     }
 
-    // Registra na memória secundária
-    process_hashmap_put(sim->process_map_secondary, pid, new_process);
-    return new_process;
+    if (!load_process_text(sim, proc, texts, text_size)) {
+        destroy_process(proc, &sim->secondary_memory_ctx);
+        return NULL;
+    }
+
+    process_hashmap_put(sim->process_map_secondary, pid, proc);
+    return proc;
+}
+
+// Função principal refatorada
+Process* criar_processo(Simulador* sim, const uint32_t pid, const char* name, const Instruction* instructions, const uint32_t instruction_count, char* texts, const int text_size) {
+    // Tenta criar na memória principal
+    Process* proc = nalloc_alloc(&sim->main_memory_ctx, sizeof(Process));
+    if (!proc) return create_suspended_process(sim, pid, name, instructions, instruction_count, texts, text_size);
+
+    init_process(proc, pid, name, instruction_count, sim, PROCESS_READY);
+
+    if (!allocate_process_objects(proc, &sim->main_memory_ctx, instruction_count)) {
+        destroy_process(proc, &sim->main_memory_ctx);
+        return create_suspended_process(sim, pid, name, instructions, instruction_count, texts, text_size);
+    }
+
+    memcpy(proc->instructions, instructions, instruction_count * sizeof(Instruction));
+
+    if (!load_process_text(sim, proc, texts, text_size)) {
+        destroy_process(proc, &sim->main_memory_ctx);
+        return create_suspended_process(sim, pid, name, instructions, instruction_count, texts, text_size);
+    }
+
+    process_hashmap_put(sim->process_map_main, pid, proc);
+    process_queue_enqueue(sim->process_queue, proc);
+    return proc;
 }
 
 // Função para terminar um processo

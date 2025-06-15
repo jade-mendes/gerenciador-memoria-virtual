@@ -16,7 +16,8 @@
 #include "process.h"
 #include "tabelas.h"
 
-void inst_create(char *process_name, const size_t pid);
+void inst_create_var(const char *var_name, const size_t pid);
+void inst_create_num(int num, const size_t pid);
 void inst_terminate(const size_t pid);
 void inst_mmap(const char *var_name, uintptr_t add_like, int size, const size_t pid);
 void inst_print_n(const char *var_name, const size_t pid);
@@ -46,8 +47,11 @@ void inst_input_s(const char *var_name, int size, const size_t pid);
 void execute(const size_t index, const size_t pid, Instruction *instructions) {
     Instruction *inst = &instructions[index];
     switch (inst->type) {
-        case INST_CREATE:
-            inst_create(inst->args.create.process_name, pid);
+        case INST_CREATE_VAR:
+            inst_create_var(inst->args.create_var.process_name, pid);
+            break;
+        case INST_CREATE_NUM:
+            inst_create_num(inst->args.create_num.num, pid);
             break;
         case INST_TERMINATE:
             inst_terminate(pid);
@@ -325,9 +329,28 @@ void write_variable_buffer(Process* p, const char* var_name, const char* buffer,
     }
 }
 
-// Implementações das instruções ============================================
+bool read_address_to_string(Simulador* simulador, Process* p, uintptr_t addr, char* str) {
+    // Lê o endereço da memória e converte para string
+    uint8_t byte;
+    size_t i = 0;
+    do {
+        int status;
+        byte = get_mem(simulador, p, addr + i, &status);
+        if (status != MEM_ACCESS_OK) {
+            snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
+                     addr + i, ADDR_STATUS(status));
+            terminar_processo(simulador, p);
+            return false;
+        }
+        str[i] = byte;
+        i++;
+    } while (byte && i < MAX_MSG_SIZE - 1); // Limita o tamanho da string
+    str[i] = '\0'; // Garante que a string esteja terminada
+    return true;
+}
 
-void inst_create(char *process_name, const size_t pid) {
+
+void create_process_by_name(char *process_name, const size_t pid) {
     snprintf(process_output, MAX_MSG_SIZE, "Criando processo: %s", process_name);
 
     // Ler instruções do arquivo
@@ -349,9 +372,70 @@ void inst_create(char *process_name, const size_t pid) {
     if (text_out) free(text_out);
 }
 
+// Implementações das instruções ============================================
+
+void inst_create_var(const char *var_name, const size_t pid) {
+    const char* key = var_name[0] == '&' ? var_name + 1 : var_name;
+    Process* p = simulador->current_process;
+    char buffer[MAX_NAME_LEN];
+
+    read_variable_to_string(p, key, buffer);
+    snprintf(process_output, MAX_MSG_SIZE, "Criando processo: %s", buffer);
+
+    // Ler instruções do arquivo
+    Instruction *instructions;
+    size_t instruction_count;
+    char *text_out;
+    int text_size;
+    char file_name[100];
+    snprintf(file_name, sizeof(file_name), "./process/%s.bin", buffer);
+    if (!get_instructions(file_name, &instructions, &instruction_count, &text_out, &text_size)) {
+        snprintf(process_error, MAX_MSG_SIZE, "Erro ao ler instrucoes do arquivo '%s'", file_name);
+        return;
+    }
+
+    Process* p_n = criar_processo(simulador, rand(), buffer, instructions, instruction_count, text_out, text_size);
+
+    if (!p_n) {
+        snprintf(process_error, MAX_MSG_SIZE, "Falha ao criar processo %s", buffer);
+    }
+
+    free(instructions);
+    if (text_out) free(text_out);
+}
+
+void inst_create_num(const int num, const size_t pid) {
+    Process* p = simulador->current_process;
+    char buffer[MAX_NAME_LEN];
+
+    read_address_to_string(simulador, p, (uintptr_t)num, buffer);
+    snprintf(process_output, MAX_MSG_SIZE, "Criando processo: '%s'", buffer);
+
+    // Ler instruções do arquivo
+    Instruction *instructions;
+    size_t instruction_count;
+    char *text_out;
+    int text_size;
+    char file_name[100];
+    snprintf(file_name, sizeof(file_name), "./process/%s.bin", buffer);
+    if (!get_instructions(file_name, &instructions, &instruction_count, &text_out, &text_size)) {
+        snprintf(process_error, MAX_MSG_SIZE, "Erro ao ler instrucoes do arquivo '%s'", file_name);
+        return;
+    }
+
+    Process* p_n = criar_processo(simulador, rand(), buffer, instructions, instruction_count, text_out, text_size);
+
+    if (!p_n) {
+        snprintf(process_error, MAX_MSG_SIZE, "Falha ao criar processo %s", buffer);
+    }
+
+    free(instructions);
+    if (text_out) free(text_out);
+}
+
 void inst_terminate(const size_t pid) {
     snprintf(process_output, MAX_MSG_SIZE, "Terminando processo");
-    terminar_processo(simulador, pid);
+    terminar_processo(simulador, get_process_by_pid(simulador, pid));
 }
 
 void inst_mmap(const char *var_name, uintptr_t add_like, int size, const size_t pid) {
@@ -556,7 +640,7 @@ void inst_input_s(const char *var_name, int size, const size_t pid) {
     char buffer[MAX_MSG_SIZE] = {0};
     strncpy(buffer, process_input, size);
     buffer[size - 1] = '\0'; // Garantir que a string esteja terminada
-    snprintf(process_output, MAX_MSG_SIZE, "Lendo string: \"%s\"", buffer);
+    snprintf(process_output, MAX_MSG_SIZE, "Lendo string: '%s'", buffer);
     write_variable_buffer(p, var_name, buffer, size);
 
     process_input[0] = '\0';

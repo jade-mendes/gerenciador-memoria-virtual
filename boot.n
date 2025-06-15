@@ -1,13 +1,17 @@
 // Muitos olá
 
 &cont = mmap(0x1000, 4);
+&pName = mmap(0x1004, 32);
 
-&vezes = "Quantos vezes você quer criar o processo test?";
+&vezes = "Quantos processos você quer criar?";
+&qName = "Qual o nome do processo?";
 
 print_s(vezes);
 input_n(cont);
 
 label(loop1);
     cont = cont - 1;
-    Create(test);
+    print_s(qName);
+    input_s(pName, 32);
+    Create(pName);
     jump_gt(loop1, cont, 0);

@@ -10,6 +10,7 @@
 #include "n_interpreter.h"
 #include "web_server.h"
 #include "Simulador.h"
+#include "tabelas.h"
 
 void print_config(SimulationConfig config) {
     printf("\n=== Configuração da Simulação ===\n");
@@ -54,7 +55,7 @@ void start_simulation_button(char* json, int client_socket) {
     simulador = create_simulator(config);
     print_config(config);
 
-    inst_create("boot", 0);
+    create_process_by_name("boot", 0);
 
     send_json(client_socket, "{\"status\": \"Simulação iniciada\"}");
 }
@@ -84,4 +85,21 @@ void web_set_user_input(char* json, int client_socket) {
     printf("Entrada do usuário: %s\n", process_input);
 
     write(client_socket, "HTTP/1.1 200 OK", 15);
+}
+
+
+void web_get_data_from_address(char* json, int client_socket) {
+    if (!simulador) {
+        write(client_socket, "HTTP/1.1 400 Bad Request", 24);
+        return;
+    }
+
+    uintptr_t address = 0;
+    sscanf(json, "{\"address\": %llu}", &address);
+
+    const uint8_t value = *(uint8_t*)address;
+
+    char response[64];
+    snprintf(response, sizeof(response), "{\"value\": %d}", value);
+    send_json(client_socket, response);
 }

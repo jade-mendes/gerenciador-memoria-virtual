@@ -251,6 +251,18 @@ body {
     transition: border 0.2s;
 }
 
+.address-bar input[type="number"] {
+    background: #2a2a2a;
+    border: 1.5px solid #333;
+    border-radius: 4px;
+    color: #e0e0e0;
+    padding: 8px 12px;
+    font-size: 15px;
+    margin-right: 8px;
+    outline: none;
+    transition: border 0.2s;
+}
+
 .address-bar input[type="text"]:focus {
     border-color: #1e88e5;
 }

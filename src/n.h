@@ -6,12 +6,14 @@
 #define N_H
 
 #define MAX_NAME_LEN 8 // 7 caracteres + \0
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 // Enumeração dos tipos de instrução
 typedef enum {
-    INST_CREATE,
+    INST_CREATE_VAR,
+    INST_CREATE_NUM,
     INST_TERMINATE,
     INST_MMAP,
     INST_PRINT_N,
@@ -45,7 +47,8 @@ typedef union  {
 
 // União para argumentos de instruções
 typedef union {
-    struct { char process_name[MAX_NAME_LEN]; } create;
+    struct { char process_name[MAX_NAME_LEN]; } create_var;
+    struct { int num; } create_num;
     struct { char var_name[MAX_NAME_LEN]; uintptr_t add_like; int size; } mmap;
     struct { char var_name[MAX_NAME_LEN]; } print;
     struct { char var1[MAX_NAME_LEN]; int num; } assign_var_num;
@@ -72,7 +75,7 @@ typedef struct {
     InstArgs args;
 } Instruction;
 
-void get_instructions(char* file_name, Instruction **instructions, size_t *count, char **texts_out, int *text_size);
+bool get_instructions(char* file_name, Instruction **instructions, size_t *count, char **texts_out, int *text_size);
 
 
 

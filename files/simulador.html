@@ -31,15 +31,18 @@
                 <div class="usage-label" id="memory-usage-label-secondary">47%</div>
             </div>
             <div class="memory-block">
-                <div class="content">
+                <div class="content" id="memory-content-main">
                     Conteúdo
                 </div>
                 <div class="address-bar">
                     <label>
-                        <input type="text" placeholder="Endereço">
+                        <input type="text" placeholder="Endereço" id="address-input">
                     </label>
-                    <button>Adicionar</button>
-                    <button>Limpar</button>
+                    <label>
+                        <input type="number" placeholder="size" min="1" max="128" id="size-input">
+                    </label>
+                    <button onclick="GetMemory()">Adicionar</button>
+                    <button onclick="LimparMemoria()">Limpar</button>
                 </div>
             </div>
         </div>
