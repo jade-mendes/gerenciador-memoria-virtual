@@ -166,7 +166,9 @@ uint8_t get_mem(const Simulador* s, Process* p, const uint32_t virt_addr, bool u
 
     if (!tlb_hit) {
         frame_addr = entry->frame;
-        tlb_update(s->tlb, page_num, frame_addr);
+        if (use_tlb) {
+            tlb_update(s->tlb, page_num, frame_addr);
+        }
     }
 
     entry->referenced = true;
@@ -207,7 +209,9 @@ void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uin
 
     if (!tlb_hit) {
         frame_addr = entry->frame;
-        tlb_update(s->tlb, page_num, frame_addr);
+        if (use_tlb) {
+            tlb_update(s->tlb, page_num, frame_addr);
+        }
     }
 
     entry->referenced = true;
