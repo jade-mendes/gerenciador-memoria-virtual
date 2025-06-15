@@ -4,6 +4,7 @@
 
 #include "tabelas.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -126,6 +127,7 @@ void tlb_invalidate_entry(const TLB* tlb, const uint32_t page) {
 }
 
 void reset_tlb_validity(const TLB* tlb) {
+    printf("\nResetando TLB\n");
     for (uint32_t i = 0; i < tlb->size; i++) {
         tlb->entries[i].valid = false;
         tlb->entries[i].referenced = false; // Reseta bit de referência
@@ -133,7 +135,7 @@ void reset_tlb_validity(const TLB* tlb) {
 }
 
 // Funções de acesso à memória
-uint8_t get_mem(const Simulador* s, Process* p, const uint32_t virt_addr, int* out_status) {
+uint8_t get_mem(const Simulador* s, Process* p, const uint32_t virt_addr, bool use_tlb, int* out_status) {
     // Verificar se o endereço excede o espaço lógico
     const uint32_t max_virt_addr = (1U << s->config.BITS_LOGICAL_ADDRESS) - 1;
     if (virt_addr > max_virt_addr) {
@@ -141,11 +143,15 @@ uint8_t get_mem(const Simulador* s, Process* p, const uint32_t virt_addr, int* o
         return 0;
     }
 
-    uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
+    const uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
     const uint32_t offset = virt_addr % s->config.PAGE_SIZE;
 
     uintptr_t frame_addr;
-    bool tlb_hit = tlb_lookup(s->tlb, page_num, &frame_addr);
+    bool tlb_hit = false;
+    if (use_tlb) {
+       tlb_hit = tlb_lookup(s->tlb, page_num, &frame_addr);
+    }
+
 
     if (page_num >= p->page_table->num_entries) {
         *out_status = MEM_ACCESS_PAGE_NOT_ALLOCATED;
@@ -170,18 +176,23 @@ uint8_t get_mem(const Simulador* s, Process* p, const uint32_t virt_addr, int* o
     return *physical_addr;
 }
 
-void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uint8_t value, int* out_status) {
+void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uint8_t value, bool use_tlb, int* out_status) {
     // Verificar se o endereço excede o espaço lógico
     const uint32_t max_virt_addr = (1U << s->config.BITS_LOGICAL_ADDRESS) - 1;
     if (virt_addr > max_virt_addr) {
         *out_status = MEM_ACCESS_INVALID_ADDRESS;
         return;
     }
-    uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
-    uint32_t offset = virt_addr % s->config.PAGE_SIZE;
+
+    // Calcular o número da página e o deslocamento
+    const uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
+    const uint32_t offset = virt_addr % s->config.PAGE_SIZE;
 
     uintptr_t frame_addr;
-    bool tlb_hit = tlb_lookup(s->tlb, page_num, &frame_addr);
+    bool tlb_hit = false;
+    if (use_tlb) {
+        tlb_hit = tlb_lookup(s->tlb, page_num, &frame_addr);
+    }
 
     if (page_num >= p->page_table->num_entries) {
         *out_status = MEM_ACCESS_PAGE_NOT_ALLOCATED;
@@ -211,7 +222,7 @@ void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uin
 
 // Aloca uma página virtual para o processo
 bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
-    uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
+    const uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
 
     if (page_num < p->page_table->num_entries && p->page_table->entries[page_num].valid) {
         return true; // Página já alocada
@@ -219,13 +230,13 @@ bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
 
     const NallocContext* context = p->state == PROCESS_SUSPENDED ? &s->secondary_memory_ctx : &s->main_memory_ctx;
 
-    uintptr_t frame_addr = (uintptr_t) nalloc_alloc(context, s->config.PAGE_SIZE);
+    const uintptr_t frame_addr = (uintptr_t) nalloc_alloc(context, s->config.PAGE_SIZE);
     if (!frame_addr) {
         return false; // Falha na alocação de memória
     }
 
     if (page_num >= p->page_table->num_entries) {
-        uint32_t new_num_entries = page_num + 1;
+        const uint32_t new_num_entries = page_num + 1;
         PAGE_TABLE_ENTRY* new_entries = nalloc_realloc(
             context,
             p->page_table->entries,
@@ -233,7 +244,7 @@ bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
         );
 
         if (!new_entries) {
-            nalloc_free(context, (void*) frame_addr);
+            nalloc_free(context, (void*)frame_addr);
             return false; // Falha na realocação de memória
         }
 
@@ -259,7 +270,7 @@ bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr) {
 // Libera uma página virtual do processo
 // Pode ser chamada apenas por processos na memória principal
 void deallocate_page(Simulador* s, Process* p, uint32_t virt_addr) {
-    uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
+    const uint32_t page_num = virt_addr / s->config.PAGE_SIZE;
 
     if (page_num >= p->page_table->num_entries || !p->page_table->entries[page_num].valid) {
         return;

@@ -1,5 +1,5 @@
 //
-// Created by natha on 05/06/2025.
+// Created by nathan on 05/06/2025.
 //
 
 
@@ -18,140 +18,171 @@
 
 Simulador* simulador;
 
-void escalonamento(Simulador* sim) {
+// ====================== Funções Auxiliares ======================
+
+// Desbloqueia processos esperando por IO
+void desbloquear_processos_io(Simulador* sim) {
     char buf[100];
-    // verificar se tem coisa para desbloquear
     PROCESS_HASHMAP_FOREACH(sim->process_map_main, process) {
-        if (process->value->state == PROCESS_BLOCKED && process->value->blocked_reason == IO) {
-            // Desbloqueia o processo se houver entrada do usuário
-            if (process_input[0] != '\0') {
-                desbloquear_processo(sim, process->value);
-
-                sprintf(buf, "\nProcesso %s [%u] desbloqueado por IO", process->value->name, process->value->pid);
-                strcat(process_output, buf);
-            }
-        }
-        else if (process->value->state == PROCESS_BLOCKED && process->value->blocked_reason == UNKNOWN_REASON) {
-            if (rand() % 4 == 0) {
-                // Simula desbloqueio aleatório
-                desbloquear_processo(sim, process->value);
-
-                sprintf(buf, "\nProcesso %s [%u] desbloqueado aleatoriamente", process->value->name, process->value->pid);
-                strcat(process_output, buf);
-            }
-        }
-    }
-
-    // Verifica se há processos suspensos para desuspender
-    PROCESS_HASHMAP_FOREACH_SAFE(sim->process_map_secondary, entry_var, next_var) {
-        if (entry_var->value->state == PROCESS_SUSPENDED) {
-            // Desuspende o processo
-            if (try_swipe(sim, entry_var->value)) {
-                // Se a troca foi bem-sucedida, remove do mapa de secundária
-                printf("\nProcesso %s [%u] desuspenso e movido para memória principal", entry_var->value->name, entry_var->value->pid);
-                sprintf(process_output, "Processo %s [%u] desuspenso e movido para memória principal", entry_var->value->name, entry_var->value->pid);
-            }
+        if (process->value->state == PROCESS_BLOCKED && 
+            process->value->blocked_reason == IO && 
+            process_input[0] != '\0') {
+            
+            desbloquear_processo(sim, process->value);
+            snprintf(buf, sizeof(buf), "\nProcesso %s [%u] desbloqueado por IO", 
+                     process->value->name, process->value->pid);
+            strcat(process_output, buf);
         }
     }
 }
 
-
-bool proxima_acao(Simulador* sim) {
-    sim->current_cycle++;
-    sim->important_cycle = false;
-
-    if (!sim->current_process) {
-        // Escalona novo processo se disponível
-        if (!process_queue_is_empty(sim->process_queue)) {
-            sim->current_process = process_queue_dequeue(sim->process_queue);
-            sim->current_process->state = PROCESS_RUNNING;
-            sim->current_process->time_slice_remaining = sim->config.TIME_SLICE;
-            reset_tlb_validity(sim->tlb);
-
-            printf("\n\033[32mProcesso %s [%u] escalonado para execução.\033[0m\n",
-                   sim->current_process->name, sim->current_process->pid);
-            sprintf(process_output, "Processo %s [%u] escalonado para execução.",
-                   sim->current_process->name, sim->current_process->pid);
-
-            return true;
+// Desbloqueia processos com motivo desconhecido aleatoriamente
+void desbloquear_processos_aleatorios(Simulador* sim) {
+    char buf[100];
+    PROCESS_HASHMAP_FOREACH(sim->process_map_main, process) {
+        if (process->value->state == PROCESS_BLOCKED && 
+            process->value->blocked_reason == UNKNOWN_REASON && 
+            (rand() % 4 == 0)) {
+            
+            desbloquear_processo(sim, process->value);
+            snprintf(buf, sizeof(buf), "\nProcesso %s [%u] desbloqueado aleatoriamente", 
+                     process->value->name, process->value->pid);
+            strcat(process_output, buf);
         }
+    }
+}
 
-        // Se não há processos prontos, termina a simulação
-        printf("\n\033[31mNenhum processo pronto para executar. \033[0m\n");
-        sprintf(process_output, "Nenhum processo pronto para executar. ");
-        escalonamento(sim);
+// Dessuspende processos da memória secundária
+void dessuspender_processos(Simulador* sim) {
+    PROCESS_HASHMAP_FOREACH_SAFE(sim->process_map_secondary, entry_var, next_var) {
+        if (entry_var->value->state == PROCESS_SUSPENDED && try_swipe(sim, entry_var->value)) {
+            char msg[100];
+            snprintf(msg, sizeof(msg), "\nProcesso %s [%u] desuspenso e movido para memória principal", 
+                     entry_var->value->name, entry_var->value->pid);
+            printf("%s", msg);
+            strcat(process_output, msg);
+        }
+    }
+}
 
+// Escalonador principal
+void escalonamento(Simulador* sim) {
+    desbloquear_processos_io(sim);
+    desbloquear_processos_aleatorios(sim);
+    dessuspender_processos(sim);
+}
+
+// Tenta escalonar um novo processo
+bool tentar_escalonar(Simulador* sim) {
+    if (process_queue_is_empty(sim->process_queue)) {
+        printf("\n\033[31mNenhum processo pronto para executar.\033[0m\n");
+        strcpy(process_output, "Nenhum processo pronto para executar.");
+        escalonamento(sim);  // Tenta desbloquear/dessuspender processos
         return false;
     }
-
-    // Executa próxima instrução
-    if (sim->current_process->instruction_index < sim->current_process->instruction_count) {
-
-        // Preparar para nova instrução
-        process_error[0] = '\0';
-        process_output[0] = '\0';
-
-        // Obter instrução atual
-        Instruction* instructions = sim->current_process->instructions;
-        const size_t current_index = sim->current_process->instruction_index;
-        const Instruction current_inst = instructions[current_index];
-
-        // Mostrar estado atual
-        printf("\n=== Instruction(%zu) Cycle(%u) ===", current_index, sim->current_cycle);
-        printf("\nProcesso: %s [%u]", sim->current_process->name, sim->current_process->pid);
-
-        // Solicitar entrada do usuário
-        if ((current_inst.type == INST_INPUT_N || current_inst.type == INST_INPUT_S) && process_input[0] == '\0') {
-            bloquear_processo_atual(sim, IO, 0);
-            sprintf(process_output, "Processo bloqueado para esperar input.");
-            printf("\n\033[34m%s\033[0m", process_output);
-            fflush(stdout);
-
-            return true;
-        }
-
-        // Executar instrução
-        simulador = sim;
-        execute(current_index, sim->current_process->pid, instructions);
-
-        if (sim->current_process) {
-            sim->current_process->instruction_index++;
-            sim->current_process->time_slice_remaining--;
-        }
-
+    if (sim->current_cycle % 10 == 0) {
+        escalonamento(sim);  // Executa escalonamento a cada 10 ciclos
     }
-    else {
-        // Se não há mais instruções, termina o processo
+
+    sim->current_process = process_queue_dequeue(sim->process_queue);
+    sim->current_process->state = PROCESS_RUNNING;
+    sim->current_process->time_slice_remaining = sim->config.TIME_SLICE;
+    reset_tlb_validity(sim->tlb);
+
+    char msg[150];
+    snprintf(msg, sizeof(msg), "\n\033[32mProcesso %s [%u] escalonado para execução.\033[0m\n",
+             sim->current_process->name, sim->current_process->pid);
+    printf("%s", msg);
+    strcat(process_output, msg);
+
+    return true;
+}
+
+// Executa uma instrução do processo atual
+void executar_instrucao(Simulador* sim) {
+    // Preparar execução
+    process_error[0] = '\0';
+    process_output[0] = '\0';
+
+    // Obter instrução atual
+    Instruction* instructions = sim->current_process->instructions;
+    const size_t current_index = sim->current_process->instruction_index;
+    const Instruction current_inst = instructions[current_index];
+
+    // Mostrar estado atual
+    printf("\n=== Instruction(%zu) Cycle(%u) ===", current_index, sim->current_cycle);
+    printf("\nProcesso: %s [%u]", sim->current_process->name, sim->current_process->pid);
+
+    // Tratar instruções de entrada
+    if ((current_inst.type == INST_INPUT_N || current_inst.type == INST_INPUT_S) && 
+        process_input[0] == '\0') {
+        bloquear_processo_atual(sim, IO, 0);
+        strcpy(process_output, "Processo bloqueado para esperar input.");
+        printf("\n\033[34m%s\033[0m", process_output);
+        return;
+    }
+
+    // Executar instrução
+    simulador = sim;  // Contexto global temporário
+    execute(current_index, sim->current_process->pid, instructions);
+
+    // Atualizar estado do processo
+    if (sim->current_process) {
+        sim->current_process->instruction_index++;
+        sim->current_process->time_slice_remaining--;
+    }
+}
+
+// Verifica condições de término do processo
+void verificar_termino_processo(Simulador* sim) {
+    // Verificar fim das instruções
+    if (sim->current_process->instruction_index >= sim->current_process->instruction_count) {
         terminar_processo(sim, sim->current_process);
         sim->current_process = NULL;
+        return;
     }
 
-    // Verifica fim do time slice
-    if (sim->current_process && sim->current_process->time_slice_remaining <= 0) {
+    // Verificar fim do time slice
+    if (sim->current_process->time_slice_remaining <= 0) {
         sim->current_process->state = PROCESS_READY;
         process_queue_enqueue(sim->process_queue, sim->current_process);
         sim->current_process = NULL;
     }
-
-
-
-    // char* json = generate_simulator_json(sim);
-    // if (json) {
-    //     printf("\n\033[32m%s\033[0m\n", json);
-    //     free(json);
-    // }
-
-    if (process_error[0] != '\0') {
-        printf("\n\033[31mErro: %s\033[0m", process_error);
-    }
-    else if (process_output[0] != '\0') {
-        printf("\n\033[34m%s\033[0m", process_output);
-    }
-
-    fflush(stdout);
-    return true;
 }
 
+// Exibe mensagens de erro/saída
+void exibir_mensagens() {
+    if (process_error[0] != '\0') {
+        printf("\n\033[31mErro: %s\033[0m", process_error);
+    } else if (process_output[0] != '\0') {
+        printf("\n\033[34m%s\033[0m", process_output);
+    }
+    fflush(stdout);
+}
+
+// Função principal do ciclo de execução
+bool proxima_acao(Simulador* sim) {
+    sim->current_cycle++;
+    sim->important_cycle = false;
+
+    // Gerenciar processo atual
+    if (!sim->current_process) {
+        return tentar_escalonar(sim);
+    }
+
+    // Executar próxima instrução se disponível
+    if (sim->current_process->instruction_index < sim->current_process->instruction_count) {
+        executar_instrucao(sim);
+    }
+
+    // Verificar condições de término
+    if (sim->current_process) {
+        verificar_termino_processo(sim);
+    }
+
+    exibir_mensagens();
+    return true;
+}
 Simulador* create_simulator(const SimulationConfig config) {
     Simulador* sim = malloc(sizeof(Simulador));
 
@@ -240,7 +271,7 @@ Process* get_process_by_pid(Simulador* simulador, uint32_t pid) {
 
 
 // Função auxiliar para converter estado do processo para string
-static const char* process_state_to_str(ProcessState state) {
+const char* process_state_to_str(ProcessState state) {
     switch(state) {
         case PROCESS_RUNNING:   return "Executando";
         case PROCESS_READY:     return "Pronto";

@@ -65,44 +65,12 @@ bool load_process_text(const Simulador* sim, Process* proc, const char* texts, c
             if (offset >= text_size) break;
 
             int status = 0;
-            set_mem(sim, proc, virt_addr + j, texts[offset], &status);
+            set_mem(sim, proc, virt_addr + j, texts[offset], false, &status);
             if (status != MEM_ACCESS_OK) return false;
         }
     }
-    return true;
-}
-
-// Função auxiliar para expandir tabela de páginas (memória secundária)
-bool expand_page_table(const Simulador* sim, const Process* proc, const int text_size) {
-    const int num_pages = (text_size + sim->config.PAGE_SIZE - 1) / sim->config.PAGE_SIZE;
-    PAGE_TABLE_ENTRY* entries = proc->page_table->entries;
-
-    for (int i = 0; i < num_pages; i++) {
-        if (i < proc->page_table->num_entries) continue;
-
-        const uint32_t new_size = i + 1;
-        PAGE_TABLE_ENTRY* new_entries = nalloc_realloc(
-            &sim->secondary_memory_ctx,
-            entries,
-            new_size * sizeof(PAGE_TABLE_ENTRY)
-        );
-
-        if (!new_entries) return false;
-
-        // Inicializa novas entradas
-        for (uint32_t j = proc->page_table->num_entries; j < new_size; j++) {
-            new_entries[j] = (PAGE_TABLE_ENTRY) {
-                .valid = false,
-                .dirty = false,
-                .referenced = false,
-                .frame = INVALID_FRAME
-            };
-        }
-
-        proc->page_table->entries = new_entries;
-        proc->page_table->num_entries = new_size;
-        entries = new_entries; // Atualiza referência para próxima iteração
-    }
+    printf("Texto carregado no processo %s (PID: %u) com sucesso. ['%s']\n", proc->name, proc->pid, texts);
+    fflush(stdout);
     return true;
 }
 
@@ -119,11 +87,6 @@ Process* create_suspended_process(Simulador* sim, const uint32_t pid, const char
     }
 
     memcpy(proc->instructions, instructions, instruction_count * sizeof(Instruction));
-
-    if (!expand_page_table(sim, proc, text_size)) {
-        destroy_process(proc, &sim->secondary_memory_ctx);
-        return NULL;
-    }
 
     if (!load_process_text(sim, proc, texts, text_size)) {
         destroy_process(proc, &sim->secondary_memory_ctx);

@@ -186,7 +186,7 @@ uint32_t read_variable(Process* p, const char* var_name) {
     uint32_t value = 0;
     for (int i = 0; i < 4; i++) {
         int status;
-        uint8_t byte = get_mem(simulador, p, addr + i, &status);
+        uint8_t byte = get_mem(simulador, p, addr + i, true, &status);
         if (status != MEM_ACCESS_OK) {
             snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));
@@ -218,7 +218,7 @@ void read_variable_to_buffer(Process* p, const char* var_name, char* buffer, siz
 
     for (int i = 0; i < buffer_size - 1; i++) {
         int status;
-        uint8_t byte = get_mem(simulador, p, addr + i, &status);
+        uint8_t byte = get_mem(simulador, p, addr + i, true, &status);
         if (status != MEM_ACCESS_OK) {
             snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));
@@ -254,7 +254,7 @@ void read_variable_to_string(Process* p, const char* var_name, char* str) {
     uint32_t i = 0;
     do {
         int status;
-        byte = get_mem(simulador, p, addr + i, &status);
+        byte = get_mem(simulador, p, addr + i, true, &status);
         if (status != MEM_ACCESS_OK) {
             snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));
@@ -288,7 +288,7 @@ void write_variable(Process* p, const char* var_name, uint32_t value) {
     for (int i = 0; i < 4; i++) {
         uint8_t byte = (value >> (8 * i)) & 0xFF;
         int status;
-        set_mem(simulador, p, addr + i, byte, &status);
+        set_mem(simulador, p, addr + i, byte, true, &status);
         if (status != MEM_ACCESS_OK) {
             snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));
@@ -319,7 +319,7 @@ void write_variable_buffer(Process* p, const char* var_name, const char* buffer,
 
     for (size_t i = 0; i < buffer_size; i++) {
         int status;
-        set_mem(simulador, p, addr + i, buffer[i], &status);
+        set_mem(simulador, p, addr + i, buffer[i], true, &status);
         if (status != MEM_ACCESS_OK) {
             snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));
@@ -335,7 +335,7 @@ bool read_address_to_string(Simulador* simulador, Process* p, uintptr_t addr, ch
     size_t i = 0;
     do {
         int status;
-        byte = get_mem(simulador, p, addr + i, &status);
+        byte = get_mem(simulador, p, addr + i, true, &status);
         if (status != MEM_ACCESS_OK) {
             snprintf(process_error, MAX_MSG_SIZE, "Erro de acesso a memoria em 0x%x: %s [SEGFAULT] [PROCESSO ENCERRADO!]",
                      addr + i, ADDR_STATUS(status));

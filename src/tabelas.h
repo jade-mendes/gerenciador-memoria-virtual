@@ -60,8 +60,8 @@ void tlb_invalidate_entry(const TLB* tlb, const uint32_t page);
 void reset_tlb_validity(const TLB* tlb);
 
 // Funções de acesso à memória
-uint8_t get_mem(const Simulador* s, Process* p, const uint32_t virt_addr, int* out_status);
-void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uint8_t value, int* out_status);
+uint8_t get_mem(const Simulador* s, Process* p, const uint32_t virt_addr, bool use_tlb, int* out_status);
+void set_mem(const Simulador* s, Process* p, const uint32_t virt_addr, const uint8_t value, bool use_tlb, int* out_status);
 
 // Funções de gerenciamento de páginas
 bool allocate_page(const Simulador* s, Process* p, uintptr_t virt_addr);
