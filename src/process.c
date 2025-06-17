@@ -69,8 +69,6 @@ bool load_process_text(const Simulador* sim, Process* proc, const char* texts, c
             if (status != MEM_ACCESS_OK) return false;
         }
     }
-    printf("Texto carregado no processo %s (PID: %u) com sucesso. ['%s']\n", proc->name, proc->pid, texts);
-    fflush(stdout);
     return true;
 }
 

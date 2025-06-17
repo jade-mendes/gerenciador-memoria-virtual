@@ -95,16 +95,25 @@ void send_json(const int client_socket, const char *json) {
     write(client_socket, json, strlen(json));
 }
 
-char* find_json(const char* json) {
-    char* start = strchr(json, '{');
+char* find_json(const char* req) {
+    // Procurar a última abertura de JSON
+    char* start = strrchr(req, '{');
     if (start == NULL) return NULL;
 
-    char* end = strrchr(json, '}');
+    // Procurar o fechamento da última estrutura JSON a partir do último '{'
+    char* end = strchr(start, '}');
+    while (end && end[1] != '\0' && strchr(start, '}') != strrchr(start, '}')) {
+        end = strchr(end + 1, '}');
+    }
+
     if (end == NULL) return NULL;
 
+    // Encerrar o JSON com null terminator
     end[1] = '\0';
     return start;
 }
+
+
 
 // Definição das rotas (Regasi 31/05/25)
 int handle_rotes(char *buffer, const int client_socket){
