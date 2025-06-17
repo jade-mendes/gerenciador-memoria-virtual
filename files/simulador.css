@@ -128,6 +128,10 @@ body {
     border-radius: 6px;
 }
 
+.memory-panel > h3{
+    text-align: center;
+}
+
 .tables {
     display: flex;
     gap: 10px;
