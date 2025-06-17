@@ -35,6 +35,7 @@ body {
 }
 
 .process-queue {
+    height: 4.2rem;
     display: flex;
     flex-grow: 1;
     border: 2px solid #333;
@@ -58,6 +59,7 @@ body {
 
 .status-bar {
     justify-content: space-between;
+    height: 4.2rem;
 }
 
 .last-msg {
@@ -128,6 +130,10 @@ body {
     border-radius: 6px;
 }
 
+.memory-panel > h3{
+    text-align: center;
+}
+
 .tables {
     display: flex;
     gap: 10px;
@@ -138,7 +144,7 @@ body {
     flex: 1;
     border: 2px solid #333;
     border-radius: 6px;
-    padding: 10px;
+    padding: 0.3125rem;
     background: #2a2a2a;
     flex-direction: column;
     justify-content: space-around;

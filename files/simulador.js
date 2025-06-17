@@ -153,9 +153,11 @@ function atualizarListaDeProcessos(lista) {
         panel.className = "process-panel";
         panel.innerHTML = `
             <h3>${proc.name}: (${proc.pid})</h3>
+            
             <div class="tables">
                 <div class="table-box">
                     <table>
+                        <h4>Tabela de Páginas</h4>
                         <thead>
                             <tr>
                                 <th>Virtual</th>
