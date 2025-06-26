@@ -3,25 +3,25 @@
 ![image](./files/uff.png)
 
 UNIVERSIDADE FEDERAL FLUMINENSE
+
 INSTITUTO DE COMPUTAÇÃO
+
 TCC00316 - SISTEMAS OPERACIONAIS - A1
+
 Profª. Cristina Boeres
 
-
-Simulação de Gerenciador de Memória
-
-
-Ana Lívia Ribeiro
-Jade Mendes 
-Lucas Coutinho
-Mateus Regasi
-Nathan Pinheiro
-Yumi Nakashima
+Simulação de Gerenciador de Memória feito por:
+* Ana Lívia Ribeiro
+* Jade Mendes 
+* Lucas Coutinho
+* Mateus Regasi
+* Nathan Pinheiro
+* Yumi Nakashima
 
 
-NITERÓI
 Junho 2025
 
+<hr>
 
 O gerenciador de memória virtual, programado principalmente em C, simula o comportamento de um sistema operacional ao dividir processos em páginas que são carregadas para execução. A interface gráfica foi desenvolvida com HTML, CSS e JavaScript.
 
