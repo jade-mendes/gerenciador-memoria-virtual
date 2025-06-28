@@ -249,9 +249,6 @@ async function GetMemory() {
         return;
     }
 
-    contentDiv.innerHTML = 'Carregando...';
-    let newContent = '';
-
     for (let i = 0; i < size; i++) {
         try {
             const response = await fetch("/get-data-from-address", {
@@ -265,14 +262,28 @@ async function GetMemory() {
                 contentDiv.innerHTML = 'Erro!';
                 return;
             }
-            newContent += String.fromCharCode(data.value);
+            //contentDiv.innerHTML += String.fromCharCode(data.value);
+            const char = String.fromCharCode(data.value);
+            // Verifica se é um caractere imprimível (exceto \n, \t, null)
+            if (data.value === 0) {
+                contentDiv.innerHTML += "\\0";
+            } else if (data.value === 10) {
+                contentDiv.innerHTML += "\\n";
+            } else if (data.value === 9) {
+                contentDiv.innerHTML += "\\t";
+            } else if (data.value === 13) {
+                contentDiv.innerHTML += "\\r";
+            } else if (char >= ' ' && char <= '~') {
+                contentDiv.innerHTML += char;
+            } else {
+                contentDiv.innerHTML += "?";
+            }
         } catch (error) {
             console.error("Erro ao buscar /get-memory:", error);
             contentDiv.innerHTML = 'Erro na comunicação!';
             return;
         }
     }
-    contentDiv.innerHTML = newContent;
 }
 
 function SetAddressFromPage(address) {
@@ -280,7 +291,7 @@ function SetAddressFromPage(address) {
 }
 
 function LimparMemoria() {
-    document.getElementById("memory-content-main").innerHTML = "Conteúdo";
-    document.getElementById("address-input").value = "";
-    document.getElementById("size-input").value = "";
+    document.getElementById("memory-content-main").innerHTML = "";
+    //document.getElementById("address-input").value = "";
+    //document.getElementById("size-input").value = "";
 }
