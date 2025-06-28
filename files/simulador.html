@@ -7,78 +7,76 @@
     <link rel="stylesheet" href="simulador.css">
 </head>
 <body>
-<div>
-<div class="top-bar" title="Fila de Processos">
-    <div class="process-queue" id="process-queue"></div>
-</div>
+<div class="container">
+    <div class="top-bar" title="Fila de Processos">
+        <div class="process-queue" id="process-queue"></div>
+    </div>
 
-<div class="status-bar" title="Processo Atual">
-    <div class="last-msg" id="last-msg"></div>
-    <div id="remaining-cycles" title="Ciclos restantes">77</div>
-</div>
+    <div class="status-bar" title="Processo Atual">
+        <div class="last-msg" id="last-msg"></div>
+        <div id="remaining-cycles" title="Ciclos restantes">77</div>
+    </div>
 
-<div class="main-container">
-    <div class="process-panel-list" id="process-panel-list"></div>
+    <div class="main-container">
+        <div class="process-panel-list" id="process-panel-list"></div>
 
-    <div class="memory-panel">
-        <h3>Memória Principal</h3>
-        <div class="memory-content">
-            <div class="usage-bar">
-                <div class="fill" id="memory-fill-main" style="height: 75%"></div>
-                <div class="usage-label" id="memory-usage-label-main">75%</div>
-            </div>
-            <div class="usage-bar">
-                <div class="fill" id="memory-fill-secondary" style="height: 47%"></div>
-                <div class="usage-label" id="memory-usage-label-secondary">47%</div>
-            </div>
-            <div class="memory-block">
-                <div class="content" id="memory-content-main">
-                    Conteúdo
+        <div class="memory-panel">
+            <div class="memory-content">
+                <div class="usage-bar">
+                    <div class="fill" id="memory-fill-main" style="height: 75%"></div>
+                    <div class="usage-label" id="memory-usage-label-main">75%</div>
                 </div>
-                <div class="address-bar">
-                    <label>
-                        <input type="text" placeholder="Endereço" id="address-input">
-                    </label>
-                    <label>
-                        <input type="number" placeholder="size" min="1" max="128" id="size-input">
-                    </label>
-                    <button onclick="GetMemory()">Adicionar</button>
-                    <button onclick="LimparMemoria()">Limpar</button>
+                <div class="usage-bar">
+                    <div class="fill" id="memory-fill-secondary" style="height: 47%"></div>
+                    <div class="usage-label" id="memory-usage-label-secondary">47%</div>
+                </div>
+                <div class="memory-block">
+                    <div class="content" id="memory-content-main">
+                        Conteúdo
+                    </div>
+                    <div class="address-bar">
+                        <label>
+                            <input type="text" placeholder="Endereço" id="address-input">
+                        </label>
+                        <label>
+                            <input type="number" placeholder="size" min="1" max="128" id="size-input">
+                        </label>
+                        <button onclick="GetMemory()">Adicionar</button>
+                        <button onclick="LimparMemoria()">Limpar</button>
+                    </div>
                 </div>
             </div>
-        </div>
-        <div class="input-block">
-            <div class="address-bar">
-                <label>
-                    <input type="text" placeholder="Entrada do IO" id="io-input">
-                </label>
-                <button id="send-io">Enviar</button>
-            </div>
-        </div>
 
-        <div class="tbl table-box">
-            <h3>TLB</h3>
-            <table>
-                <thead>
-                <tr>
-                    <th>Index</th>
-                    <th>Valid</th>
-                    <th>Virtual</th>
-                    <th>Real</th>
-                    <th>Last Used</th>
-                    <th>Referenced</th>
-                </tr>
-                </thead>
-                <tbody id="tlb-table"></tbody>
-            </table>
+            <div class="tbl table-box">
+                <h3>TLB</h3>
+                <table>
+                    <thead>
+                    <tr>
+                        <th>Index</th>
+                        <th>Valid</th>
+                        <th>Virtual</th>
+                        <th>Real</th>
+                        <th>Last Used</th>
+                        <th>Referenced</th>
+                    </tr>
+                    </thead>
+                    <tbody id="tlb-table"></tbody>
+                </table>
+            </div>
         </div>
     </div>
-</div>
 
-<div class="bottom-bar">
-    <button id="restart">Reiniciar simulação</button>
-    <span id="current-cycle">Ciclo atual: 0</span>
-    <button id="next-cycle">Próximo ciclo</button>
+    <div class="bottom-bar">
+        <button id="restart">Reiniciar simulação</button>
+        <span id="current-cycle">Ciclo atual: 0</span>
+        <div class="address-bar">
+            <label>
+                <input type="text" placeholder="Entrada do IO" id="io-input">
+            </label>
+            <button id="send-io">Enviar</button>
+        </div>
+        <button id="next-cycle">Próximo ciclo</button>
+    </div>
 </div>
 
 <!-- Templates -->
@@ -110,7 +108,7 @@
         </div>
     </div>
 </template>
-</div>
+
 <script src="simulador.js"></script>
 </body>
 </html>

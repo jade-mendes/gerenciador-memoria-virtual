@@ -1,26 +1,64 @@
 /* Reset e fonte padrão */
 * {
     box-sizing: border-box;
+    margin: 0;
+    padding: 0;
     font-family: 'Segoe UI', sans-serif;
 }
 
+html, body {
+    height: 100%;
+}
+
 body {
-    margin: 0;
     background-color: #121212;
-    padding: 20px;
     color: #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    padding: 20px;
+    gap: 15px;
+    overflow-y: auto; /* Permite rolagem apenas no container principal se necessário */
 }
 
 /* Estilo geral dos contêineres */
 .top-bar, .status-bar, .main-container, .bottom-bar {
     display: flex;
     gap: 12px;
-    margin-bottom: 15px;
 }
 
-.process-icons {
+.top-bar, .status-bar, .bottom-bar {
+    flex-shrink: 0;
+}
+
+.process-queue {
+    min-height: 4.2rem;
     display: flex;
-    gap: 10px;
+    flex-grow: 1;
+    border: 2px solid #333;
+    background-color: #1e1e1e;
+    border-radius: 6px;
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(255,255,255,0.03);
+    flex-direction: row;
+    overflow-x: auto;
+}
+
+.process-mini {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background-color: #2a2a2a;
+    border-radius: 6px;
+    padding: 5px;
+    margin-right: 10px;
+    flex-shrink: 0;
 }
 
 .icon {
@@ -34,32 +72,10 @@ body {
     box-shadow: 0 1px 3px rgba(255,255,255,0.05);
 }
 
-.process-queue {
-    height: 4.2rem;
-    display: flex;
-    flex-grow: 1;
-    border: 2px solid #333;
-    background-color: #1e1e1e;
-    border-radius: 6px;
-    padding: 12px;
-    box-shadow: 0 1px 4px rgba(255,255,255,0.03);
-    flex-direction: row;
-}
-
-.process-mini {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background-color: #2a2a2a;
-    border-radius: 6px;
-    padding: 5px;
-    margin-right: 10px;
-}
-
 .status-bar {
     justify-content: space-between;
     height: 4.2rem;
+    align-items: center;
 }
 
 .last-msg {
@@ -70,6 +86,7 @@ body {
     align-items: center;
     padding: 8px;
     background: #1e1e1e;
+    overflow: hidden;
 }
 
 .message {
@@ -78,6 +95,9 @@ body {
     flex-grow: 1;
     padding: 6px;
     font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 #remaining-cycles {
@@ -91,11 +111,14 @@ body {
     align-items: center;
     justify-content: center;
     font-size: 18px;
+    flex-shrink: 0;
 }
 
 .main-container {
     display: flex;
     gap: 10px;
+    flex-grow: 1;
+    overflow: hidden; /* Evita que o main-container crie rolagem */
 }
 
 .process-panel-list {
@@ -103,13 +126,12 @@ body {
     background: #1e1e1e;
     padding: 12px;
     border-radius: 6px;
-    overflow-x: scroll;
-    width: 60vw;
     display: flex;
     flex-direction: row;
     gap: 15px;
+    overflow-x: auto;
+    flex: 2; /* Ocupa mais espaço */
 }
-
 
 .process-panel {
     display: flex;
@@ -118,19 +140,24 @@ body {
     border: 2px solid #333;
     background: #1e1e1e;
     border-radius: 6px;
-    width: 50vw;
     text-align: center;
+    min-width: 300px; /* Largura mínima para painéis de processo */
+    flex-shrink: 0;
 }
 
 .memory-panel {
-    flex: 1;
+    flex: 1; /* Ocupa o espaço restante */
     border: 2px solid #333;
     background: #1e1e1e;
     padding: 12px;
     border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 560px;
 }
 
-.memory-panel > h3{
+.memory-panel > h3 {
     text-align: center;
 }
 
@@ -147,15 +174,22 @@ body {
     padding: 0.3125rem;
     background: #2a2a2a;
     flex-direction: column;
-    justify-content: space-around;
     align-items: center;
+    overflow-y: auto;
     max-height: 270px;
-    overflow-y: scroll;
-
 }
 
-.tables .table-box {
-    width: 450px;
+.table-box table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table-box th, .table-box td {
+    border: 1px solid #555;
+    padding: 6px;
+    text-align: center;
+    background-color: #1e1e1e;
+    color: #e0e0e0;
 }
 
 .info-box {
@@ -166,16 +200,6 @@ body {
     border: 2px solid #333;
     background: #1e1e1e;
     border-radius: 6px;
-}
-
-.table-box table, .table-box th, .table-box td {
-    width: 250px;
-    border: 1px solid #555;
-    border-collapse: collapse;
-    padding: 6px;
-    text-align: center;
-    background-color: #1e1e1e;
-    color: #e0e0e0;
 }
 
 .memory-content {
@@ -196,17 +220,10 @@ body {
     background: #2a2a2a;
 }
 
-.content {
-    width: 100%;
-    height: 130px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
 .fill {
     width: 100%;
     background-color: #1e88e5;
+    transition: height 0.5s ease;
 }
 
 .usage-label {
@@ -224,16 +241,19 @@ body {
     flex-direction: column;
     background: #1e1e1e;
     border-radius: 4px;
-    height: fit-content;
 }
 
-.input-block {
-    border: 1px solid #444;
-    padding: 6px;
-    margin-top: 6px;
-    margin-bottom: 6px;
-    background: #1e1e1e;
+.content {
+    width: 100%;
+    min-height: 50px;
+    flex-grow: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #2a2a2a;
     border-radius: 4px;
+    padding: 5px;
+    word-break: break-all;
 }
 
 .address-bar {
@@ -241,35 +261,24 @@ body {
     justify-content: center;
     align-items: center;
     margin-top: 5px;
+    gap: 8px;
     font-size: 14px;
     color: #ccc;
 }
 
-.address-bar input[type="text"] {
+.address-bar input {
     background: #2a2a2a;
     border: 1.5px solid #333;
     border-radius: 4px;
     color: #e0e0e0;
     padding: 8px 12px;
     font-size: 15px;
-    margin-right: 8px;
     outline: none;
     transition: border 0.2s;
+    width: 100%; /* Ocupa a largura disponível */
 }
 
-.address-bar input[type="number"] {
-    background: #2a2a2a;
-    border: 1.5px solid #333;
-    border-radius: 4px;
-    color: #e0e0e0;
-    padding: 8px 12px;
-    font-size: 15px;
-    margin-right: 8px;
-    outline: none;
-    transition: border 0.2s;
-}
-
-.address-bar input[type="text"]:focus {
+.address-bar input:focus {
     border-color: #1e88e5;
 }
 
@@ -281,7 +290,6 @@ body {
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    margin-left: 6px;
     transition: background 0.2s;
 }
 
@@ -289,17 +297,17 @@ body {
     background-color: #1565c0;
 }
 
-.tbl {
+.input-block {
     border: 1px solid #444;
-    margin-top: 10px;
     padding: 6px;
-    background: #2a2a2a;
+    background: #1e1e1e;
     border-radius: 4px;
-    color: #e0e0e0;
 }
 
 .bottom-bar {
     justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
 }
 
 .bottom-bar button {
@@ -317,63 +325,67 @@ body {
     background-color: #1565c0;
 }
 
-/* Scrollbar personalizada para navegadores baseados em Webkit */
+/* Scrollbar personalizada */
 ::-webkit-scrollbar {
     width: 8px;
     height: 8px;
+}
+::-webkit-scrollbar-track {
     background: #1e1e1e;
 }
-
 ::-webkit-scrollbar-thumb {
     background: #333;
     border-radius: 6px;
-    border: 2px solid #1e1e1e;
 }
-
 ::-webkit-scrollbar-thumb:hover {
     background: #444;
 }
-
-/* Scrollbar para Firefox */
 * {
     scrollbar-width: thin;
     scrollbar-color: #333 #1e1e1e;
 }
 
-
-
-/* Adicionar estilos para mensagens de erro */
-.message.error {
-    color: #ff4444;
-    font-weight: bold;
-    margin-top: 5px;
+/* Media Queries para responsividade */
+@media (max-width: 992px) {
+    .main-container {
+        flex-direction: column;
+        overflow-y: auto;
+    }
+    .process-panel-list {
+        flex-direction: row;
+        min-height: 250px; /* Altura mínima para a lista de processos */
+    }
 }
 
-/* Estilo para mensagens de status */
-.last-msg {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-grow: 1;
-}
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
 
-.message {
-    padding: 5px 10px;
-    background: #2a2a2a;
-    border-radius: 4px;
-    font-size: 14px;
-}
+    .status-bar, .bottom-bar {
+        flex-direction: column;
+        height: auto;
+        align-items: stretch;
+        text-align: center;
+    }
 
-.valid-entry {
-    background-color: #e8f5e9; /* Verde claro para entradas válidas */
-    font-weight: bold;
-}
+    .last-msg {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+    }
 
-.valid-entry td:first-child {
-    font-weight: bold;
-    color: #2e7d32; /* Verde escuro */
-}
+    .address-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
 
-#tlb-table tr:hover {
-    background-color: #f5f5f5;
+    .address-bar input {
+        margin-right: 0;
+        margin-bottom: 8px;
+    }
+
+    .tables {
+        flex-direction: column;
+    }
 }

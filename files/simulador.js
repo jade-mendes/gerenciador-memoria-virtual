@@ -1,5 +1,13 @@
 // simulador.js
 document.addEventListener("DOMContentLoaded", () => {
+    // Alerta para o usuário não usar alert() no código.
+    // Usaremos uma caixa de mensagem customizada no futuro.
+    const originalAlert = window.alert;
+    window.alert = function(message) {
+        console.warn("Utilize um método de notificação customizado ao invés de window.alert(). Mensagem:", message);
+        originalAlert(message);
+    };
+
     document.getElementById("next-cycle").addEventListener("click", async () => {
         try {
             const response = await fetch("/next-cycle", {
@@ -42,10 +50,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    document.querySelector(".input-block button").addEventListener("click", enviarInputUsuario);
+    document.getElementById("send-io").addEventListener("click", enviarInputUsuario);
 
     // Adicionar suporte para Enter no input
-    document.querySelector(".input-block input").addEventListener("keypress", (e) => {
+    document.getElementById("io-input").addEventListener("keypress", (e) => {
         if (e.key === 'Enter') enviarInputUsuario();
     });
 
@@ -55,17 +63,21 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 function atualizarPagina(data) {
-    atualizarFilaDeProcessos(data.process_queue);
-    atualizarProcessoAtual(data.current_process, data.last_msg, data.last_error);
-    atualizarCicloAtual(data.cycle);
-    atualizarTLB(data.tlb);
-    atualizarListaDeProcessos(data.process_list);
-    atualizarMemoria(data['main-memory_usage'], data['secondary-memory_usage']);
+    if (!data) return;
+    if (data.process_queue) atualizarFilaDeProcessos(data.process_queue);
+    if (data.current_process) atualizarProcessoAtual(data.current_process, data.last_msg, data.last_error);
+    if (data.cycle !== undefined) atualizarCicloAtual(data.cycle);
+    if (data.tlb) atualizarTLB(data.tlb);
+    if (data.process_list) atualizarListaDeProcessos(data.process_list);
+    if (data['main-memory_usage'] !== undefined && data['secondary-memory_usage'] !== undefined) {
+        atualizarMemoria(data['main-memory_usage'], data['secondary-memory_usage']);
+    }
 
-    // Atualizar remaining-cycles se houver processo atual
     if (data.current_process && data.current_process["remaining-cycles"] !== undefined) {
         document.getElementById("remaining-cycles").textContent =
             data.current_process["remaining-cycles"];
+    } else {
+        document.getElementById("remaining-cycles").textContent = "N/A";
     }
 }
 
@@ -76,7 +88,7 @@ function atualizarFilaDeProcessos(fila) {
         const div = document.createElement("div");
         div.className = "process-mini";
         div.innerHTML = `
-            <img src="${proc.icon}" alt="${proc.name}" class="icon">
+            <img src="${proc.icon || ''}" alt="${proc.name}" class="icon">
             <div class="process-name">${proc.name}</div>
         `;
         container.appendChild(div);
@@ -87,27 +99,22 @@ function atualizarProcessoAtual(proc, mensagem, erro) {
     const container = document.querySelector(".last-msg");
     let content = '';
 
-    // Exibir processo atual se existir
     if (proc) {
         content += `
             <div class="process-mini">
-                <img src="${proc.icon}" alt="${proc.name}" class="icon">
+                <img src="${proc.icon || ''}" alt="${proc.name}" class="icon">
                 <div class="process-name">${proc.name}</div>
             </div>
         `;
     }
 
-    // Exibir mensagem principal
     if (mensagem) {
         content += `<div class="message"><span class="text">${mensagem}</span></div>`;
     }
 
-    // Exibir mensagem de erro se existir
     if (erro) {
         content += `<div class="message error"><span class="text">${erro}</span></div>`;
     }
-
-    document.getElementById("remaining-cycles").textContent = `${proc ? proc["remaining-cycles"] : "N/A"}`;
 
     container.innerHTML = content;
 }
@@ -123,12 +130,10 @@ function atualizarTLB(tlb) {
     tlb.forEach(entry => {
         const row = document.createElement("tr");
 
-        // Destacar linhas válidas
         if (entry.valid) {
             row.classList.add("valid-entry");
         }
 
-        // Converter valores booleanos para texto
         const validText = entry.valid ? "Sim" : "Não";
         const referencedText = entry.referenced ? "Sim" : "Não";
 
@@ -156,8 +161,8 @@ function atualizarListaDeProcessos(lista) {
             
             <div class="tables">
                 <div class="table-box">
+                    <h4>Tabela de Páginas</h4>
                     <table>
-                        <h4>Tabela de Páginas</h4>
                         <thead>
                             <tr>
                                 <th>Virtual</th>
@@ -167,7 +172,7 @@ function atualizarListaDeProcessos(lista) {
                             </tr>
                         </thead>
                         <tbody>
-                            ${proc.page_table.map(p => `
+                            ${(proc.page_table || []).map(p => `
                                 <tr>
                                     <td>${p.virtual}</td>
                                     <td onclick="SetAddressFromPage(${p.real})">${p.real}</td>
@@ -199,16 +204,15 @@ function atualizarMemoria(mainUsage, secondaryUsage) {
     const barSecondary = document.querySelector("#memory-fill-secondary");
     const labelSecondary = document.querySelector("#memory-usage-label-secondary");
 
-    barMain.style.height = `${mainPercent}%`;
-    labelMain.textContent = `${mainPercent}%`;
+    if(barMain) barMain.style.height = `${mainPercent}%`;
+    if(labelMain) labelMain.textContent = `${mainPercent}%`;
 
-    barSecondary.style.height = `${secondaryPercent}%`;
-    labelSecondary.textContent = `${secondaryPercent}%`;
+    if(barSecondary) barSecondary.style.height = `${secondaryPercent}%`;
+    if(labelSecondary) labelSecondary.textContent = `${secondaryPercent}%`;
 }
 
-// Nova função para enviar input do usuário
 async function enviarInputUsuario() {
-    const input = document.querySelector(".input-block input");
+    const input = document.getElementById("io-input");
     const texto = input.value.trim();
 
     if (!texto) return;
@@ -221,7 +225,7 @@ async function enviarInputUsuario() {
         });
 
         if (response.ok) {
-            input.value = ""; // Limpa o campo após envio bem-sucedido
+            input.value = "";
         } else {
             console.error("Erro ao enviar input:", await response.text());
         }
@@ -232,34 +236,43 @@ async function enviarInputUsuario() {
 
 
 async function GetMemory() {
-    const address = document.getElementById("address-input").value.trim();
+    const addressInput = document.getElementById("address-input");
+    const sizeInput = document.getElementById("size-input");
+    const contentDiv = document.getElementById("memory-content-main");
+
+    const address = addressInput.value.trim();
     if (!address) return;
-    const size = parseInt(document.getElementById("size-input").value.trim());
+
+    const size = parseInt(sizeInput.value.trim(), 10);
     if (isNaN(size) || size <= 0) {
         alert("Por favor, insira um tamanho válido.");
         return;
     }
 
-    const conteudo = document.getElementById("memory-content-main");
+    contentDiv.innerHTML = 'Carregando...';
+    let newContent = '';
 
     for (let i = 0; i < size; i++) {
         try {
             const response = await fetch("/get-data-from-address", {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({address: parseInt(address) + i})
+                body: JSON.stringify({address: parseInt(address, 10) + i})
             });
             const data = await response.json();
             if (data.error) {
                 alert(`Erro ao acessar memória: ${data.error}`);
+                contentDiv.innerHTML = 'Erro!';
                 return;
             }
-            console.log(`Endereço ${parseInt(address) + i}: ${data.value}`);
-            conteudo.innerHTML += String.fromCharCode(data.value);
+            newContent += String.fromCharCode(data.value);
         } catch (error) {
             console.error("Erro ao buscar /get-memory:", error);
+            contentDiv.innerHTML = 'Erro na comunicação!';
+            return;
         }
     }
+    contentDiv.innerHTML = newContent;
 }
 
 function SetAddressFromPage(address) {
@@ -267,6 +280,7 @@ function SetAddressFromPage(address) {
 }
 
 function LimparMemoria() {
-    document.getElementById("memory-content-main").innerHTML = "";
+    document.getElementById("memory-content-main").innerHTML = "Conteúdo";
     document.getElementById("address-input").value = "";
+    document.getElementById("size-input").value = "";
 }
