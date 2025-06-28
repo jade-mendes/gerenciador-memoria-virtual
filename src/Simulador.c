@@ -29,7 +29,7 @@ void desbloquear_processos_io(Simulador* sim) {
             process_input[0] != '\0') {
             
             desbloquear_processo(sim, process->value);
-            snprintf(buf, sizeof(buf), "\nProcesso %s [%u] desbloqueado por IO", 
+            snprintf(buf, sizeof(buf), " [Processo %s [%u] desbloqueado por IO.]",
                      process->value->name, process->value->pid);
             strcat(process_output, buf);
         }
@@ -45,7 +45,7 @@ void desbloquear_processos_aleatorios(Simulador* sim) {
             (rand() % 4 == 0)) {
             
             desbloquear_processo(sim, process->value);
-            snprintf(buf, sizeof(buf), "\nProcesso %s [%u] desbloqueado aleatoriamente", 
+            snprintf(buf, sizeof(buf), " [Processo %s [%u] desbloqueado aleatoriamente.]",
                      process->value->name, process->value->pid);
             strcat(process_output, buf);
         }
@@ -57,7 +57,7 @@ void dessuspender_processos(Simulador* sim) {
     PROCESS_HASHMAP_FOREACH_SAFE(sim->process_map_secondary, entry_var, next_var) {
         if (entry_var->value->state == PROCESS_SUSPENDED && try_swipe(sim, entry_var->value)) {
             char msg[100];
-            snprintf(msg, sizeof(msg), "\nProcesso %s [%u] desuspenso e movido para memória principal", 
+            snprintf(msg, sizeof(msg), " [Processo %s [%u] desuspenso e movido para memória principal.]",
                      entry_var->value->name, entry_var->value->pid);
             printf("%s", msg);
             strcat(process_output, msg);
@@ -90,7 +90,7 @@ bool tentar_escalonar(Simulador* sim) {
     reset_tlb_validity(sim->tlb);
 
     char msg[150];
-    snprintf(msg, sizeof(msg), "\n\033[32mProcesso %s [%u] escalonado para execução.\033[0m\n",
+    snprintf(msg, sizeof(msg), " [Processo %s [%u] escalonado para execução.]",
              sim->current_process->name, sim->current_process->pid);
     printf("%s", msg);
     strcat(process_output, msg);

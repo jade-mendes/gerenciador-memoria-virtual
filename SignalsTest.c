@@ -27,7 +27,7 @@ int main() {
     sa.sa_flags = SA_NODEFER;  // Não bloquear o sinal durante o handler
 
     // Registrar handler para SIGSEGV
-    if (sigaction(SIGSEGV, &sa, NULL)){
+    if (sigaction(SIGSEGV, &sa, NULL)) {
         perror("sigaction");
         exit(1);
     }
@@ -39,6 +39,12 @@ int main() {
     if (sigsetjmp(recovery_point, 1)) {
         printf("Processo recuperado com sucesso!\n");
         printf("O processo NÃO foi terminado pelo SIGSEGV.\n");
+        char c;
+        do {
+            printf("Digite 'q' para sair ou qualquer outra tecla para continuar: ");
+            c = getchar();
+            while (getchar() != '\n');  // Limpar o buffer de entrada
+        } while (c != 'q');
         return 0;
     }
 

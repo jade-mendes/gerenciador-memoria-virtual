@@ -238,11 +238,6 @@ bool try_swipe(Simulador* sim, Process* process) {
     // Registra o novo processo na memória secundária
     process_hashmap_put(sim->process_map_secondary, new_process->pid, new_process);
 
-    // Remove o processo da memória principal
-    destroy_process(process, &sim->main_memory_ctx);
-    if (process_hashmap_get(sim->process_map_main, process->pid, &process)) {
-        process_hashmap_remove(sim->process_map_main, process->pid);
-    }
-
+    terminar_processo(sim, process); // Libera o processo original
     return true; // Sucesso na troca
 }
