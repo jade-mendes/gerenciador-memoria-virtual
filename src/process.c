@@ -206,6 +206,9 @@ bool try_swipe(Simulador* sim, Process* process) {
             process_hashmap_remove(sim->process_map_secondary, process->pid);
         }
 
+        // Adiciona o novo processo à fila de prontos
+        process_queue_enqueue(sim->process_queue, new_process);
+
         return true; // Sucesso na troca
     }
 
